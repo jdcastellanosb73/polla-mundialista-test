@@ -18,6 +18,7 @@ builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddSingleton<ScoringService>();
 
 var jwt = builder.Configuration.GetSection("Jwt");
 builder.Services

@@ -6,13 +6,14 @@ using PollaApi.Contracts;
 using PollaApi.Data;
 using PollaApi.Entities;
 using PollaApi.Middleware;
+using PollaApi.Services;
 
 namespace PollaApi.Controllers;
 
 [ApiController]
 [Route("api/matches")]
 [Authorize]
-public class MatchesController(AppDbContext db) : ControllerBase
+public class MatchesController(AppDbContext db, ScoringService scoring) : ControllerBase
 {
     /// <summary>
     /// All 12 matches with the caller's OWN prediction attached.
@@ -99,6 +100,32 @@ public class MatchesController(AppDbContext db) : ControllerBase
         existing.UpdatedAt = now;
         await db.SaveChangesAsync();
         return new MyPredictionDto(existing.HomeGoals, existing.AwayGoals, existing.Points);
+    }
+
+    /// <summary>
+    /// Module 3 (admin): load or CORRECT the final result. Scoring runs for every
+    /// prediction of the match and is idempotent — a correction re-runs the
+    /// computation and overwrites, it never accumulates points.
+    /// </summary>
+    [HttpPost("{id:int}/result")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<ActionResult<object>> LoadResult(int id, ResultRequest req)
+    {
+        ValidateGoals(req.HomeGoals, req.AwayGoals);
+
+        var match = await db.Matches.FirstOrDefaultAsync(m => m.Id == id)
+            ?? throw new AppException(404, "MATCH_NOT_FOUND", $"Match {id} does not exist.");
+
+        match.HomeGoals = req.HomeGoals;
+        match.AwayGoals = req.AwayGoals;
+        match.ResultLoadedAt = DateTime.UtcNow;
+
+        var predictions = await db.Predictions.Where(p => p.MatchId == id).ToListAsync();
+        foreach (var p in predictions)
+            p.Points = scoring.Score(p.HomeGoals, p.AwayGoals, req.HomeGoals, req.AwayGoals);
+
+        await db.SaveChangesAsync();
+        return new { matchId = id, predictionsScored = predictions.Count };
     }
 
     private Guid CurrentUserId() =>

@@ -13,3 +13,6 @@ public record MyPredictionDto(int HomeGoals, int AwayGoals, int? Points);
 public record MatchDto(
     int Id, string GroupCode, string HomeTeam, string AwayTeam, DateTime KickoffAt,
     bool IsOpen, MatchScoreDto? Result, MyPredictionDto? MyPrediction);
+
+// ---- Results (module 3) ----
+public record ResultRequest(int HomeGoals, int AwayGoals);
