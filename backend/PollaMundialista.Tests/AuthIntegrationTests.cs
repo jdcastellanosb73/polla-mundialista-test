@@ -59,7 +59,6 @@ public class AuthIntegrationTests : IDisposable
     [Theory]
     [InlineData("not-an-email", "Valid Name", "Password1!")] // invalid email
     [InlineData("ok@test.dev", "X", "Password1!")]           // name too short
-    [InlineData("ok@test.dev", "Valid Name", "short")]       // weak password
     public async Task Register_InvalidInput_Returns400_VALIDATION_ERROR(string email, string name, string password)
     {
         var res = await _client.PostAsJsonAsync("/api/auth/register",
@@ -67,6 +66,22 @@ public class AuthIntegrationTests : IDisposable
 
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         Assert.Equal("VALIDATION_ERROR", await ErrorCodeOf(res));
+    }
+
+    // Strong-password policy is SERVER-enforced: length, upper, lower, digit, symbol.
+    [Theory]
+    [InlineData("Sh0rt!!")]      // 7 chars
+    [InlineData("password1!")]   // no uppercase
+    [InlineData("PASSWORD1!")]   // no lowercase
+    [InlineData("Password!!")]   // no digit
+    [InlineData("Password11")]   // no symbol
+    public async Task Register_WeakPassword_Returns400_WEAK_PASSWORD(string password)
+    {
+        var res = await _client.PostAsJsonAsync("/api/auth/register",
+            new { email = "weak@test.dev", displayName = "Weak Pass", password });
+
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        Assert.Equal("WEAK_PASSWORD", await ErrorCodeOf(res));
     }
 
     [Fact]

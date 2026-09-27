@@ -55,6 +55,32 @@ function EyeIcon({ off }) {
   );
 }
 
+// Live password requirements — mirrors the SERVER policy (which is the real gate).
+const PASSWORD_RULES = [
+  ['len', 'Mínimo 8 caracteres', (p) => p.length >= 8],
+  ['upper', 'Una mayúscula', (p) => /[A-ZÁÉÍÓÚÑ]/.test(p)],
+  ['lower', 'Una minúscula', (p) => /[a-záéíóúñ]/.test(p)],
+  ['digit', 'Un número', (p) => /\d/.test(p)],
+  ['symbol', 'Un símbolo (!, #, $...)', (p) => /[^a-zA-Z0-9À-ɏ]/.test(p)],
+];
+
+export const passwordIsStrong = (p) => PASSWORD_RULES.every(([, , test]) => test(p));
+
+function PasswordChecklist({ password }) {
+  return (
+    <ul className="pw-checks" aria-live="polite">
+      {PASSWORD_RULES.map(([key, label, test]) => {
+        const ok = test(password);
+        return (
+          <li key={key} className={ok ? 'done' : ''}>
+            <span className="pw-dot">{ok ? '✓' : '·'}</span> {label}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function Hero({ variant }) {
   const admin = variant === 'admin';
   return (
@@ -193,9 +219,12 @@ export default function Login({ variant = 'user' }) {
               </span>
             </label>
 
+            {!admin && mode === 'register' && <PasswordChecklist password={form.password} />}
+
             {error && <div className="error-box">{error}</div>}
 
-            <button className="login-cta" disabled={busy}>
+            <button className="login-cta"
+              disabled={busy || (mode === 'register' && !passwordIsStrong(form.password))}>
               {busy ? 'Un momento…'
                 : admin ? 'Entrar al panel →'
                 : mode === 'login' ? 'Entrar a mi polla →' : 'Crear cuenta y jugar →'}

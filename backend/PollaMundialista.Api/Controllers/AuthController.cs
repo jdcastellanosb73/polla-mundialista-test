@@ -33,8 +33,12 @@ public class AuthController(AppDbContext db, TokenService tokens, ILogger<AuthCo
             throw new AppException(400, "VALIDATION_ERROR", "A valid email is required.");
         if (name.Length is < 2 or > 60)
             throw new AppException(400, "VALIDATION_ERROR", "Display name must be 2-60 characters.");
-        if ((req.Password ?? "").Length < 8)
-            throw new AppException(400, "VALIDATION_ERROR", "Password must be at least 8 characters.");
+
+        // Strong-password policy, SERVER-enforced (the UI checklist is just UX):
+        // >= 8 chars with uppercase, lowercase, digit and symbol.
+        var weak = PasswordWeakness(req.Password ?? "");
+        if (weak is not null)
+            throw new AppException(400, "WEAK_PASSWORD", weak);
 
         // SECURITY DECISION: registration ALWAYS creates role User. There is no way to
         // self-assign Admin through the API — the only admin is seeded from configuration.
@@ -123,6 +127,18 @@ public class AuthController(AppDbContext db, TokenService tokens, ILogger<AuthCo
 
         logger.LogInformation("Login ok: {UserId}", user.Id);
         return new AuthResponse(tokens.Create(user), ToDto(user));
+    }
+
+    /// <summary>Returns a human message describing what the password is missing, or null if strong.</summary>
+    private static string? PasswordWeakness(string password)
+    {
+        var missing = new List<string>();
+        if (password.Length < 8) missing.Add("mínimo 8 caracteres");
+        if (!password.Any(char.IsUpper)) missing.Add("una mayúscula");
+        if (!password.Any(char.IsLower)) missing.Add("una minúscula");
+        if (!password.Any(char.IsDigit)) missing.Add("un número");
+        if (!password.Any(c => !char.IsLetterOrDigit(c))) missing.Add("un símbolo");
+        return missing.Count == 0 ? null : $"La contraseña necesita: {string.Join(", ", missing)}.";
     }
 
     // Same error for unknown email, wrong password AND locked account — no enumeration.
