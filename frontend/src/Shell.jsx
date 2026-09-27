@@ -76,6 +76,7 @@ export default function Shell() {
           {isAdmin ? (
             <>
               <NavLink to="/admin" end><SummaryIcon /> {t('shell.nav_summary')}</NavLink>
+              <NavLink to="/admin/ranking"><RankingIcon /> {t('shell.nav_ranking')}</NavLink>
               <NavLink to="/admin/participantes"><UsersIcon /> {t('shell.nav_participants')}</NavLink>
             </>
           ) : (

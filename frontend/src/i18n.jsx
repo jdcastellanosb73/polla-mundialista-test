@@ -198,6 +198,9 @@ const S = {
   'time.hour': { es: 'Hace {n} h', en: '{n} h ago' },
   'time.day': { es: 'Hace {n} d', en: '{n} d ago' },
 
+  // Organizer: ranking
+  'ar.chip': { es: '{n} participantes', en: '{n} participants' },
+
   // Organizer: participants
   'ap.sub': {
     es: 'Es una polla privada: tú creas cada cuenta y entregas la contraseña temporal.',

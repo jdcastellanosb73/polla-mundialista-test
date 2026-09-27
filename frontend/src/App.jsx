@@ -6,6 +6,7 @@ import ChangePassword from './pages/ChangePassword.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Matches from './pages/Matches.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
+import AdminRanking from './pages/AdminRanking.jsx';
 import AdminParticipants from './pages/AdminParticipants.jsx';
 
 function RequireAuth({ children, role, denyRole, denyTo, loginPath = '/login' }) {
@@ -37,6 +38,7 @@ export default function App() {
       {/* Organizer area */}
       <Route element={<RequireAuth role="Admin" loginPath="/admin/login"><Shell /></RequireAuth>}>
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/ranking" element={<AdminRanking />} />
         <Route path="/admin/participantes" element={<AdminParticipants />} />
       </Route>
 
