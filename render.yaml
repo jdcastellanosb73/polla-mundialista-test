@@ -1,0 +1,21 @@
+# Render Blueprint — deploys the API as a free Docker web service.
+# In Render: New + > Blueprint > connect this repo. Fill the sync:false vars when prompted.
+services:
+  - type: web
+    name: polla-api
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ConnectionStrings__Default
+        sync: false   # Neon connection string (Npgsql format)
+      - key: Jwt__Key
+        sync: false   # strong random production key
+      - key: WebOrigin
+        sync: false   # the hosted frontend origin, e.g. https://polla-mundialista.netlify.app
+      - key: Seed__AdminPassword
+        sync: false
+      - key: Seed__DemoPassword
+        sync: false

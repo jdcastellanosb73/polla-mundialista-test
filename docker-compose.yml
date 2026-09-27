@@ -1,4 +1,16 @@
 services:
+  api:
+    build: ./backend
+    container_name: polla-api
+    environment:
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=polla;Username=polla;Password=polla_dev"
+      WebOrigin: "http://localhost:5173"
+    ports:
+      - "5180:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: postgres:16-alpine
     container_name: polla-db
