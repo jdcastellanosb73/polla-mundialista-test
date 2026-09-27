@@ -584,3 +584,33 @@ h1 { font-size: 1.6rem; margin: 0.35rem 0 0.25rem; letter-spacing: -0.3px; }
 .champion-stats { display: flex; justify-content: center; gap: 1.6rem; font-size: 0.92rem; color: var(--muted); }
 .champion-stats strong { color: var(--primary); font-size: 1.05rem; }
 .champion-cheer { text-align: center; font-weight: 700; margin: 0.9rem 0 0; }
+
+/* ================= Admin: participants ================= */
+.part-row {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto;
+  align-items: center; gap: 0.75rem;
+  padding: 0.6rem 0.2rem; border-bottom: 1px solid var(--border);
+}
+.part-row:last-child { border-bottom: none; }
+.part-info { min-width: 0; display: flex; flex-direction: column; }
+.part-name { font-weight: 700; font-size: 0.92rem; }
+.part-email { color: var(--muted); font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; }
+.part-date { color: var(--muted); font-size: 0.78rem; }
+
+.temp-cred {
+  margin-top: 1.1rem; padding: 0.95rem 1rem;
+  background: var(--lime-soft); border: 1px solid rgba(125, 163, 0, 0.35);
+  border-radius: 10px; font-size: 0.88rem; display: grid; gap: 0.5rem;
+}
+.temp-cred p { margin: 0; }
+.temp-cred-box {
+  display: flex; justify-content: space-between; align-items: center; gap: 0.6rem;
+  background: #fff; border: 1px dashed rgba(125, 163, 0, 0.5);
+  border-radius: 8px; padding: 0.55rem 0.75rem; flex-wrap: wrap;
+}
+.temp-cred-box code { font-size: 1.05rem; font-weight: 800; color: var(--navy); letter-spacing: 1px; }
+
+@media (max-width: 980px) {
+  .part-row { grid-template-columns: 34px minmax(0, 1fr) auto; }
+  .part-date { display: none; }
+}

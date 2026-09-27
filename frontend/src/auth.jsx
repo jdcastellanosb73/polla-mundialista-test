@@ -24,8 +24,10 @@ export function AuthProvider({ children }) {
   const login = async (email, password, portal) =>
     persist(await api('/api/auth/login', { method: 'POST', body: { email, password, portal } }));
 
-  const register = async (email, displayName, password) =>
-    persist(await api('/api/auth/register', { method: 'POST', body: { email, displayName, password } }));
+  // Forced on first sign-in of organizer-created accounts; the server issues a
+  // fresh token without the change-pending claim.
+  const changePassword = async (currentPassword, newPassword) =>
+    persist(await api('/api/auth/change-password', { method: 'POST', body: { currentPassword, newPassword } }));
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -34,7 +36,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, login, changePassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

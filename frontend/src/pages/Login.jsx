@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 
-// Split-screen access pages (participants and organizers) — same backend
-// endpoint; the ADMIN variant additionally verifies the returned role and
-// refuses non-admin accounts client-side (the API enforces roles regardless).
+// Split-screen access pages (participants and organizers). PRIVATE-GROUP model:
+// there is no self-registration — the organizer creates every account and hands
+// out a temp password; portal segregation is SERVER-enforced (403 PORTAL_MISMATCH).
 
 function MailIcon() {
   return (
@@ -42,7 +42,7 @@ function ShieldIcon() {
   );
 }
 
-function EyeIcon({ off }) {
+export function EyeIcon({ off }) {
   return off ? (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
       <path d="M3 3l18 18M10.6 10.7a2.5 2.5 0 0 0 3.5 3.5M6.7 6.9C4.6 8.1 3 10 2 12c1.8 3.7 5.5 6 10 6 1.5 0 2.9-.25 4.2-.73M12 6c4.5 0 8.2 2.3 10 6-.6 1.2-1.4 2.3-2.4 3.2" />
@@ -55,33 +55,7 @@ function EyeIcon({ off }) {
   );
 }
 
-// Live password requirements — mirrors the SERVER policy (which is the real gate).
-const PASSWORD_RULES = [
-  ['len', 'Mínimo 8 caracteres', (p) => p.length >= 8],
-  ['upper', 'Una mayúscula', (p) => /[A-ZÁÉÍÓÚÑ]/.test(p)],
-  ['lower', 'Una minúscula', (p) => /[a-záéíóúñ]/.test(p)],
-  ['digit', 'Un número', (p) => /\d/.test(p)],
-  ['symbol', 'Un símbolo (!, #, $...)', (p) => /[^a-zA-Z0-9À-ɏ]/.test(p)],
-];
-
-export const passwordIsStrong = (p) => PASSWORD_RULES.every(([, , test]) => test(p));
-
-function PasswordChecklist({ password }) {
-  return (
-    <ul className="pw-checks" aria-live="polite">
-      {PASSWORD_RULES.map(([key, label, test]) => {
-        const ok = test(password);
-        return (
-          <li key={key} className={ok ? 'done' : ''}>
-            <span className="pw-dot">{ok ? '✓' : '·'}</span> {label}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function Hero({ variant }) {
+export function Hero({ variant }) {
   const admin = variant === 'admin';
   return (
     <aside className="login-hero">
@@ -106,7 +80,7 @@ function Hero({ variant }) {
         )}
         <p className="hero-text">
           {admin
-            ? 'Administra los resultados y la emoción de cada jornada desde un solo lugar.'
+            ? 'Administra los resultados, tu grupo de participantes y la emoción de cada jornada.'
             : 'Vive la pasión del fútbol, reta a tus amigos y demuestra quién sabe más de la cancha.'}
         </p>
       </div>
@@ -135,17 +109,19 @@ function Hero({ variant }) {
 
 export default function Login({ variant = 'user' }) {
   const admin = variant === 'admin';
-  const { user, login, register } = useAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState('login'); // register only exists on the user variant
-  const [form, setForm] = useState({ email: '', displayName: '', password: '' });
+  const [form, setForm] = useState({ email: '', password: '' });
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   // Already signed in: send each role to its home (declarative redirect — never
   // call navigate() during render).
-  if (user) return <Navigate to={user.role === 'Admin' ? '/admin' : '/'} replace />;
+  if (user) {
+    if (user.mustChangePassword) return <Navigate to="/cambiar-contrasena" replace />;
+    return <Navigate to={user.role === 'Admin' ? '/admin' : '/'} replace />;
+  }
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -154,12 +130,10 @@ export default function Login({ variant = 'user' }) {
     setError(null);
     setBusy(true);
     try {
-      // Portal segregation is SERVER-enforced (403 PORTAL_MISMATCH); the page
-      // just declares which access it is.
-      mode === 'login'
-        ? await login(form.email, form.password, admin ? 'admin' : 'user')
-        : await register(form.email, form.displayName, form.password);
-      navigate(admin ? '/admin' : '/');
+      // Portal segregation is SERVER-enforced; the page just declares itself.
+      const logged = await login(form.email, form.password, admin ? 'admin' : 'user');
+      if (logged.mustChangePassword) navigate('/cambiar-contrasena');
+      else navigate(admin ? '/admin' : '/');
     } catch (err) {
       setError(err.message || 'Error inesperado');
     } finally {
@@ -176,13 +150,11 @@ export default function Login({ variant = 'user' }) {
           <span className="login-kicker">
             {admin ? <><KeyIcon /> ACCESO ADMINISTRATIVO</> : 'BIENVENIDO DE VUELTA'}
           </span>
-          <h1>{admin ? 'Hola, organizador' : mode === 'login' ? 'Inicia sesión' : 'Crea tu cuenta'}</h1>
+          <h1>{admin ? 'Hola, organizador' : 'Inicia sesión'}</h1>
           <p className="login-sub">
             {admin
               ? 'Ingresa tus credenciales para continuar.'
-              : mode === 'login'
-                ? 'Ingresa para consultar y actualizar tus pronósticos.'
-                : 'Regístrate para empezar a predecir los partidos del grupo.'}
+              : 'Ingresa para consultar y actualizar tus pronósticos.'}
           </p>
 
           <form onSubmit={submit} className="login-form">
@@ -195,23 +167,13 @@ export default function Login({ variant = 'user' }) {
               </span>
             </label>
 
-            {!admin && mode === 'register' && (
-              <label>
-                <span className="field-label">Nombre para el ranking</span>
-                <span className="field">
-                  <input value={form.displayName} onChange={set('displayName')} minLength={2}
-                    maxLength={60} required placeholder="Como te verán los demás" />
-                </span>
-              </label>
-            )}
-
             <label>
               <span className="field-label">Contraseña</span>
               <span className="field has-icon">
                 {admin ? <KeyIcon /> : <LockIcon />}
                 <input type={showPass ? 'text' : 'password'} value={form.password}
                   onChange={set('password')} minLength={8} required placeholder="••••••••"
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
+                  autoComplete="current-password" />
                 <button type="button" className="eye-btn" onClick={() => setShowPass(!showPass)}
                   aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                   <EyeIcon off={showPass} />
@@ -219,41 +181,23 @@ export default function Login({ variant = 'user' }) {
               </span>
             </label>
 
-            {!admin && mode === 'register' && <PasswordChecklist password={form.password} />}
-
             {error && <div className="error-box">{error}</div>}
 
-            <button className="login-cta"
-              disabled={busy || (mode === 'register' && !passwordIsStrong(form.password))}>
-              {busy ? 'Un momento…'
-                : admin ? 'Entrar al panel →'
-                : mode === 'login' ? 'Entrar a mi polla →' : 'Crear cuenta y jugar →'}
+            <button className="login-cta" disabled={busy}>
+              {busy ? 'Un momento…' : admin ? 'Entrar al panel →' : 'Entrar a mi polla →'}
             </button>
           </form>
 
-          {admin && (
+          {admin ? (
             <div className="admin-note">
               <ShieldIcon />
               <span>Este acceso está reservado para los administradores del torneo.</span>
             </div>
-          )}
-
-          {!admin && (
-            <p className="login-alt">
-              {mode === 'login' ? (
-                <>¿Aún no tienes una cuenta?{' '}
-                  <button className="linklike" onClick={() => { setMode('register'); setError(null); }}>
-                    Regístrate aquí
-                  </button>
-                </>
-              ) : (
-                <>¿Ya tienes cuenta?{' '}
-                  <button className="linklike" onClick={() => { setMode('login'); setError(null); }}>
-                    Inicia sesión
-                  </button>
-                </>
-              )}
-            </p>
+          ) : (
+            <div className="admin-note">
+              <ShieldIcon />
+              <span>Es una polla privada: el organizador crea tu cuenta y te entrega la contraseña temporal.</span>
+            </div>
           )}
 
           <div className="login-divider" />
@@ -268,14 +212,6 @@ export default function Login({ variant = 'user' }) {
               </>
             )}
           </p>
-
-          {!admin && (
-            <div className="demo-box">
-              <strong>Cuentas demo</strong><br />
-              Usuario: <code>user@polla.dev</code> / <code>User123!</code><br />
-              Admin: <code>admin@polla.dev</code> / <code>Admin123!</code>
-            </div>
-          )}
         </div>
       </section>
     </div>

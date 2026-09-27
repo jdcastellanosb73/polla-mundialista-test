@@ -23,6 +23,12 @@ const SummaryIcon = () => (
     <path d="M4 20V10M10 20V4M16 20v-7M21 20H3" />
   </svg>
 );
+const UsersIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <circle cx="9" cy="8" r="3.4" />
+    <path d="M2.8 19c.7-3 3.2-4.6 6.2-4.6s5.5 1.6 6.2 4.6M16 4.6a3.4 3.4 0 0 1 0 6.8M18.4 14.6c1.6.7 2.6 2 3 4.4" />
+  </svg>
+);
 const LogoutIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="17" height="17" aria-hidden="true">
     <path d="M9 4H5v16h4M14 8l4 4-4 4M18 12H9" />
@@ -65,7 +71,10 @@ export default function Shell() {
 
         <nav className="sb-nav">
           {isAdmin ? (
-            <NavLink to="/admin" end><SummaryIcon /> Resumen</NavLink>
+            <>
+              <NavLink to="/admin" end><SummaryIcon /> Resumen</NavLink>
+              <NavLink to="/admin/participantes"><UsersIcon /> Participantes</NavLink>
+            </>
           ) : (
             <>
               <NavLink to="/" end><RankingIcon /> Ranking</NavLink>
