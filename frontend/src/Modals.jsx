@@ -86,9 +86,13 @@ export function ResultsSummaryModal({ items, totalPoints, onClose }) {
   );
 }
 
-/** One-time tournament champion announcement (participants and organizer). */
-export function ChampionModal({ champion, isYou, onClose }) {
-  const { t } = useLang();
+/**
+ * One-time tournament champion announcement (participants and organizer).
+ * Everyone sees who won; the champion additionally gets their full match
+ * history — the road to the title — inside the popup (`history`).
+ */
+export function ChampionModal({ champion, isYou, history, onClose }) {
+  const { t, team } = useLang();
   return (
     <ModalShell onClose={onClose} label={t('md.champ_label')}>
       <div className="modal-head champion">
@@ -97,6 +101,7 @@ export function ChampionModal({ champion, isYou, onClose }) {
         <p className="muted">{t('md.all_done')}</p>
       </div>
       <div className="champion-card">
+        {!isYou && <div className="muted" style={{ fontSize: '0.8rem' }}>{t('md.winner_is')}</div>}
         <div className="champion-name">{champion.displayName}</div>
         <div className="champion-stats">
           <span><strong>{champion.points}</strong> {t('md.points')}</span>
@@ -105,6 +110,30 @@ export function ChampionModal({ champion, isYou, onClose }) {
         <div className="muted" style={{ fontSize: '0.8rem' }}>{t('md.tiebreak')}</div>
       </div>
       {isYou && <p className="champion-cheer">{t('md.cheer')}</p>}
+
+      {isYou && history?.length > 0 && (
+        <>
+          <h3 className="champion-road">{t('md.road')}</h3>
+          {history.map((p) => {
+            const [cls, label, pts] = pointsLabel(p.points, t);
+            return (
+              <div className="hist-item" key={p.matchId}>
+                <div className="hist-teams">
+                  <span><Flag name={p.homeTeam} /> {team(p.homeTeam)}</span>
+                  <span className="vs">vs</span>
+                  <span>{team(p.awayTeam)} <Flag name={p.awayTeam} /></span>
+                </div>
+                <div className="hist-line">
+                  <span className="hist-score">{p.realHomeGoals} — {p.realAwayGoals}</span>
+                  <span className={`hist-label ${cls}`}>{label}</span>
+                  <span className="hist-pts">{pts}</span>
+                </div>
+                <div className="hist-pred">{t('md.your_pred_line', { h: p.predictedHomeGoals, a: p.predictedAwayGoals })}</div>
+              </div>
+            );
+          })}
+        </>
+      )}
     </ModalShell>
   );
 }

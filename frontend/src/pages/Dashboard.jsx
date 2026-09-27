@@ -183,7 +183,9 @@ export default function Dashboard() {
         <ResultsSummaryModal items={popup.items} totalPoints={me?.points ?? 0} onClose={closeResults} />
       )}
       {popup?.type === 'champion' && rows[0] && (
-        <ChampionModal champion={rows[0]} isYou={rows[0].userId === user.id} onClose={closeChampion} />
+        <ChampionModal champion={rows[0]} isYou={rows[0].userId === user.id}
+          history={rows[0].userId === user.id ? myHistory?.predictions : null}
+          onClose={closeChampion} />
       )}
 
       <span className="page-kicker">{t('dash.kicker')}</span>

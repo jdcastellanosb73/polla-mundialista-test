@@ -248,6 +248,8 @@ const S = {
   'md.points': { es: 'puntos', en: 'points' },
   'md.exact_hits': { es: 'marcadores exactos', en: 'exact scores' },
   'md.tiebreak': { es: 'Desempate por marcadores exactos.', en: 'Tie broken by exact scores.' },
+  'md.road': { es: 'Tu camino al título', en: 'Your road to the title' },
+  'md.winner_is': { es: 'El ganador es:', en: 'The winner is:' },
   'md.cheer': { es: 'Nadie leyó la cancha como tú.', en: 'Nobody read the pitch like you.' },
   'md.your_pred_line': { es: 'Tu predicción: {h} — {a}', en: 'Your prediction: {h} — {a}' },
 
