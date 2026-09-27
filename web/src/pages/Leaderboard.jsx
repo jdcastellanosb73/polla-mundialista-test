@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import { api } from '../api.js';
-import { teamFlag } from '../flags.js';
+import { Flag } from '../flags.jsx';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -35,7 +35,7 @@ function HistoryPanel({ userId }) {
         {history.predictions.map((p) => (
           <tr key={p.matchId}>
             <td>
-              {teamFlag(p.homeTeam)} {p.homeTeam} vs {teamFlag(p.awayTeam)} {p.awayTeam}{' '}
+              <Flag name={p.homeTeam} /> {p.homeTeam} vs <Flag name={p.awayTeam} /> {p.awayTeam}{' '}
               <span className="muted">· Grupo {p.groupCode}</span>
             </td>
             <td><strong>{p.realHomeGoals} - {p.realAwayGoals}</strong></td>

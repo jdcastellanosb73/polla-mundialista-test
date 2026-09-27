@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
-import { teamFlag } from '../flags.js';
+import { Flag } from '../flags.jsx';
 
 const fmtKickoff = (iso) =>
   new Date(iso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' });
@@ -8,7 +8,7 @@ const fmtKickoff = (iso) =>
 function Team({ name }) {
   return (
     <>
-      <span className="flag">{teamFlag(name)}</span>
+      <Flag name={name} />
       <span>{name}</span>
     </>
   );

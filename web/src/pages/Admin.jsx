@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
-import { teamFlag } from '../flags.js';
+import { Flag } from '../flags.jsx';
 
 function ResultRow({ match, onSaved }) {
   const [home, setHome] = useState(match.result?.homeGoals ?? '');
@@ -31,10 +31,10 @@ function ResultRow({ match, onSaved }) {
   return (
     <div className="match-row">
       <div className="match-teams">
-        <span className="flag">{teamFlag(match.homeTeam)}</span>
+        <Flag name={match.homeTeam} />
         <span>{match.homeTeam}</span>
         <span className="vs">vs</span>
-        <span className="flag">{teamFlag(match.awayTeam)}</span>
+        <Flag name={match.awayTeam} />
         <span>{match.awayTeam}</span>
       </div>
       <div className="match-kickoff">
