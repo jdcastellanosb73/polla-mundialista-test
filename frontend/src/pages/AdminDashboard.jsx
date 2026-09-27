@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import { ChampionModal, championSeen, markChampionSeen } from '../Modals.jsx';
 import { TrophyIcon, ChartIcon } from '../icons.jsx';
+import { Flag } from '../flags.jsx';
 
 // Organizer home: live stats, result loading with a match selector and a big
 // score preview (design system), and a real activity feed derived from the
@@ -164,13 +165,13 @@ export default function AdminDashboard() {
             <>
               <div className="score-preview">
                 <div className="score-team">
-                  <span className="score-team-name">{selected.homeTeam}</span>
+                  <span className="score-team-name"><Flag name={selected.homeTeam} /> {selected.homeTeam}</span>
                   <input className="score-input" type="number" min="0" max="99" value={home}
                     onChange={(e) => setHome(e.target.value)} aria-label={`Goles ${selected.homeTeam}`} placeholder="·" />
                 </div>
                 <span className="score-sep">—</span>
                 <div className="score-team">
-                  <span className="score-team-name">{selected.awayTeam}</span>
+                  <span className="score-team-name"><Flag name={selected.awayTeam} /> {selected.awayTeam}</span>
                   <input className="score-input" type="number" min="0" max="99" value={away}
                     onChange={(e) => setAway(e.target.value)} aria-label={`Goles ${selected.awayTeam}`} placeholder="·" />
                 </div>
