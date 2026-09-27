@@ -1,6 +1,10 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using PollaApi.Data;
 using PollaApi.Middleware;
+using PollaApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +14,27 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+
+builder.Services.AddScoped<TokenService>();
+
+var jwt = builder.Configuration.GetSection("Jwt");
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =>
+    {
+        o.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwt["Issuer"],
+            ValidateAudience = true,
+            ValidAudience = jwt["Audience"],
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+    });
+builder.Services.AddAuthorization();
 
 // CORS: only the known web origin(s) — configurable for the hosted environment.
 var webOrigins = (builder.Configuration["WebOrigin"] ?? "http://localhost:5173")
@@ -31,7 +56,12 @@ app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.Run();
+
+// Exposes the implicit Program class to the integration test project (WebApplicationFactory<Program>).
+public partial class Program { }
