@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Application layer: API contracts (DTOs) and application-level error types. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\PollaMundialista.Domain\PollaMundialista.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

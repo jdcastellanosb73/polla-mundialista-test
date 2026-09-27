@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PollaMundialista.Api</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Presentation layer: HTTP pipeline, controllers, auth middleware, rate limiting. -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PollaMundialista.Application\PollaMundialista.Application.csproj" />
+    <ProjectReference Include="..\PollaMundialista.Infrastructure\PollaMundialista.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

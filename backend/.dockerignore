@@ -1,0 +1,5 @@
+**/bin/
+**/obj/
+PollaMundialista.Tests/
+db/
+**/Properties/launchSettings.json
