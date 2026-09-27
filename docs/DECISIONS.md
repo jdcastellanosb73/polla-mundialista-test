@@ -132,6 +132,12 @@ AI-First, revisada en vivo por un panel técnico y hosteada con usuarios reales)
   por marcadores exactos). El "visto" vive en localStorage por usuario — decisión
   consciente a esta escala; el camino de crecimiento es un feed de notificaciones
   del lado del servidor.
+- **Actualización en (casi) tiempo real**: el dashboard sondea el API cada 30 s y al
+  volver el foco a la pestaña, así los puntos, el ranking y los popups aparecen sin
+  recargar. Polling elegido sobre WebSockets/SSE: tres GETs baratos por usuario cada
+  30 s no estresan nada a esta escala, y una conexión persistente no sobrevive bien
+  los reposos del hosting gratuito. Un fallo transitorio del sondeo no tumba la vista
+  (solo se muestra error si aún no hay datos).
 
 ---
 
@@ -229,7 +235,8 @@ Las pollas reales suelen mover dinero. Se excluyó deliberadamente:
 
 - **Recuperación de contraseña por email**: requiere proveedor de correo y flujo de
   tokens; en el modelo de grupo privado, el organizador puede recrear la cuenta.
-- **Notificaciones del lado del servidor** (los popups usan "visto" local): el paso
-  siguiente natural si el producto creciera.
+- **Notificaciones push del lado del servidor** (WebSockets/SSE): el dashboard ya
+  sondea cada 30 s, suficiente aquí; una conexión persistente sería el paso siguiente
+  si el producto creciera.
 - **Fases eliminatorias / más jornadas**: el enunciado acota a 12 partidos de fase de
   grupos; el modelo (grupos en `matches.group_code`) admite extenderlo.

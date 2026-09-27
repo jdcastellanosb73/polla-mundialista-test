@@ -105,26 +105,48 @@ export default function Dashboard() {
   const [openUser, setOpenUser] = useState(null);
   const [popup, setPopup] = useState(null); // {type:'results', items} | {type:'champion'}
 
+  // Loads data on mount and then POLLS every 30s (and on tab focus), so new
+  // results appear — points, ranking and popups — without a manual reload.
   useEffect(() => {
-    Promise.all([
+    let cancelled = false;
+    let hasData = false;
+
+    const load = () => Promise.all([
       api('/api/leaderboard'),
       api(`/api/users/${user.id}/predictions`),
       api('/api/matches'),
     ])
       .then(([lb, hist, ms]) => {
+        if (cancelled) return;
+        hasData = true;
         setRows(lb);
         setMyHistory(hist);
         setMatches(ms);
 
         // Post-result popups: newly scored matches first, champion afterwards.
+        // Never replace a popup the user is currently reading.
         const finished = ms.filter((m) => m.result);
         const seen = readSeen(user.id);
         const newly = finished.filter((m) => seen[m.id] !== m.result.loadedAt);
         const done = ms.length > 0 && finished.length === ms.length;
-        if (newly.length > 0) setPopup({ type: 'results', items: newly, done });
-        else if (done && !championSeen(user.id)) setPopup({ type: 'champion' });
+        setPopup((current) => {
+          if (current) return current;
+          if (newly.length > 0) return { type: 'results', items: newly, done };
+          if (done && !championSeen(user.id)) return { type: 'champion' };
+          return null;
+        });
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => { if (!cancelled && !hasData) setError(e.message); });
+
+    load();
+    const timer = setInterval(load, 30000);
+    const onFocus = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
   }, [user.id]);
 
   const closeResults = () => {
