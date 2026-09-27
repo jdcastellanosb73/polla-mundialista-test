@@ -1,52 +1,42 @@
-import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth.jsx';
+import Shell from './Shell.jsx';
 import Login from './pages/Login.jsx';
+import Dashboard from './pages/Dashboard.jsx';
 import Matches from './pages/Matches.jsx';
-import Admin from './pages/Admin.jsx';
-import Leaderboard from './pages/Leaderboard.jsx';
+import AdminDashboard from './pages/AdminDashboard.jsx';
 
-function RequireAuth({ children, role, loginPath = '/login' }) {
+function RequireAuth({ children, role, denyRole, denyTo, loginPath = '/login' }) {
   const { user } = useAuth();
   const location = useLocation();
   if (!user) return <Navigate to={loginPath} state={{ from: location }} replace />;
-  // UI-level guard only — the API enforces roles on every endpoint regardless.
+  // UI-level guards only — the API enforces roles on every endpoint regardless.
   if (role && user.role !== role) return <Navigate to="/" replace />;
+  if (denyRole && user.role === denyRole) return <Navigate to={denyTo || '/'} replace />;
   return children;
-}
-
-function Nav() {
-  const { user, logout } = useAuth();
-  if (!user) return null;
-  return (
-    <nav className="nav">
-      <span className="nav-brand"><span className="ball">⚽</span>Polla Mundialista</span>
-      <div className="nav-links">
-        <NavLink to="/" end>Partidos</NavLink>
-        <NavLink to="/leaderboard">Ranking</NavLink>
-        {user.role === 'Admin' && <NavLink to="/admin">Admin</NavLink>}
-      </div>
-      <div className="nav-user">
-        <span className="who">{user.displayName}{user.role === 'Admin' ? ' · Admin' : ''}</span>
-        <button className="btn btn-ghost btn-sm" onClick={logout}>Salir</button>
-      </div>
-    </nav>
-  );
 }
 
 export default function App() {
   return (
-    <>
-      <Nav />
-      <main className="container">
-        <Routes>
-          <Route path="/login" element={<Login variant="user" />} />
-          <Route path="/admin/login" element={<Login variant="admin" />} />
-          <Route path="/" element={<RequireAuth><Matches /></RequireAuth>} />
-          <Route path="/leaderboard" element={<RequireAuth><Leaderboard /></RequireAuth>} />
-          <Route path="/admin" element={<RequireAuth role="Admin" loginPath="/admin/login"><Admin /></RequireAuth>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-    </>
+    <Routes>
+      {/* Public access pages (own full-screen layout) */}
+      <Route path="/login" element={<Login variant="user" />} />
+      <Route path="/admin/login" element={<Login variant="admin" />} />
+
+      {/* Participant area (sidebar shell) — organizers live in /admin */}
+      <Route element={<RequireAuth denyRole="Admin" denyTo="/admin"><Shell /></RequireAuth>}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/pronosticos" element={<Matches />} />
+      </Route>
+
+      {/* Organizer area */}
+      <Route element={<RequireAuth role="Admin" loginPath="/admin/login"><Shell /></RequireAuth>}>
+        <Route path="/admin" element={<AdminDashboard />} />
+      </Route>
+
+      {/* Legacy paths */}
+      <Route path="/leaderboard" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

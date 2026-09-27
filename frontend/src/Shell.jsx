@@ -1,0 +1,100 @@
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
+import { useAuth } from './auth.jsx';
+import { api } from './api.js';
+
+// App shell after sign-in: navy sidebar (brand, user, role-aware nav, context
+// card) + light content area. Matches the dashboard design system.
+
+const RankingIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+    <path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3" />
+  </svg>
+);
+const BallIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7.5 8 10.4l1.5 4.6h5L16 10.4 12 7.5ZM12 3v4.5M4 9.5l4 1M20 9.5l-4 1M6.5 19l3-4M17.5 19l-3-4" />
+  </svg>
+);
+const SummaryIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M4 20V10M10 20V4M16 20v-7M21 20H3" />
+  </svg>
+);
+const LogoutIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="17" height="17" aria-hidden="true">
+    <path d="M9 4H5v16h4M14 8l4 4-4 4M18 12H9" />
+  </svg>
+);
+
+const fmtNext = (iso) =>
+  new Date(iso).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+
+export const initialsOf = (name) =>
+  name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+
+export default function Shell() {
+  const { user, logout } = useAuth();
+  const isAdmin = user.role === 'Admin';
+  const [next, setNext] = useState(null);
+
+  useEffect(() => {
+    if (isAdmin) return;
+    api('/api/matches')
+      .then((ms) => setNext(ms.filter((m) => m.isOpen).sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt))[0] || null))
+      .catch(() => {});
+  }, [isAdmin]);
+
+  return (
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="sb-brand">
+          <span className="mark">🏆</span>
+          <span className="name">polla<em>Mundial</em></span>
+        </div>
+
+        <div className="sb-user">
+          <span className="sb-avatar">{initialsOf(user.displayName)}</span>
+          <div>
+            <div className="sb-user-name">{user.displayName}</div>
+            <div className="sb-user-role">{isAdmin ? 'Organizador del torneo' : 'Participante'}</div>
+          </div>
+        </div>
+
+        <nav className="sb-nav">
+          {isAdmin ? (
+            <NavLink to="/admin" end><SummaryIcon /> Resumen</NavLink>
+          ) : (
+            <>
+              <NavLink to="/" end><RankingIcon /> Ranking</NavLink>
+              <NavLink to="/pronosticos"><BallIcon /> Mis pronósticos</NavLink>
+            </>
+          )}
+        </nav>
+
+        {isAdmin ? (
+          <div className="sb-card">
+            <strong>Panel protegido</strong>
+            Solo cuentas con rol de administrador.
+          </div>
+        ) : next ? (
+          <div className="sb-card">
+            <strong>Próximo partido</strong>
+            <span className="hl">{next.homeTeam} vs {next.awayTeam}</span><br />
+            {fmtNext(next.kickoffAt)}
+          </div>
+        ) : null}
+
+        <button className="sb-logout" onClick={logout}><LogoutIcon /> Cerrar sesión</button>
+      </aside>
+
+      <main className="content">
+        <div className="content-inner">
+          <Outlet />
+        </div>
+      </main>
+    </div>
+  );
+}

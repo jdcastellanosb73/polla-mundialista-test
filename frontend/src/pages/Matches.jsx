@@ -115,10 +115,11 @@ export default function Matches() {
 
   return (
     <div>
+      <span className="page-kicker">MUNDIAL 2026 · POLLA OFICIAL</span>
       <div className="page-head">
         <div>
-          <h1>Partidos</h1>
-          <p className="subtitle">3 pts marcador exacto · 1 pt resultado correcto · 0 pts fallo. Cierra al inicio de cada partido.</p>
+          <h1>Mis pronósticos</h1>
+          <p className="page-sub" style={{ marginBottom: 0 }}>3 pts marcador exacto · 1 pt resultado correcto · 0 pts fallo. Cierra al inicio de cada partido.</p>
         </div>
         <span className="progress-chip">
           {predicted.length}/{open.length} partidos abiertos predichos

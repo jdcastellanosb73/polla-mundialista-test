@@ -109,7 +109,7 @@ function Hero({ variant }) {
 
 export default function Login({ variant = 'user' }) {
   const admin = variant === 'admin';
-  const { user, login, register, logout } = useAuth();
+  const { user, login, register } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState('login'); // register only exists on the user variant
   const [form, setForm] = useState({ email: '', displayName: '', password: '' });
@@ -128,15 +128,11 @@ export default function Login({ variant = 'user' }) {
     setError(null);
     setBusy(true);
     try {
-      const logged = mode === 'login'
-        ? await login(form.email, form.password)
+      // Portal segregation is SERVER-enforced (403 PORTAL_MISMATCH); the page
+      // just declares which access it is.
+      mode === 'login'
+        ? await login(form.email, form.password, admin ? 'admin' : 'user')
         : await register(form.email, form.displayName, form.password);
-
-      if (admin && logged.role !== 'Admin') {
-        logout();
-        setError('Esta cuenta no tiene acceso de organizador. Ingresa por el acceso de participantes.');
-        return;
-      }
       navigate(admin ? '/admin' : '/');
     } catch (err) {
       setError(err.message || 'Error inesperado');
@@ -166,7 +162,7 @@ export default function Login({ variant = 'user' }) {
           <form onSubmit={submit} className="login-form">
             <label>
               <span className="field-label">{admin ? 'Correo de administrador' : 'Correo electrónico'}</span>
-              <span className="field">
+              <span className="field has-icon">
                 <MailIcon />
                 <input type="email" value={form.email} onChange={set('email')} required autoFocus
                   placeholder={admin ? 'admin@correo.com' : 'tu@correo.com'} autoComplete="email" />
@@ -185,7 +181,7 @@ export default function Login({ variant = 'user' }) {
 
             <label>
               <span className="field-label">Contraseña</span>
-              <span className="field">
+              <span className="field has-icon">
                 {admin ? <KeyIcon /> : <LockIcon />}
                 <input type={showPass ? 'text' : 'password'} value={form.password}
                   onChange={set('password')} minLength={8} required placeholder="••••••••"

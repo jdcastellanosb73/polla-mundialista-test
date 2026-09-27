@@ -21,8 +21,8 @@ export function AuthProvider({ children }) {
     return user;
   };
 
-  const login = async (email, password) =>
-    persist(await api('/api/auth/login', { method: 'POST', body: { email, password } }));
+  const login = async (email, password, portal) =>
+    persist(await api('/api/auth/login', { method: 'POST', body: { email, password, portal } }));
 
   const register = async (email, displayName, password) =>
     persist(await api('/api/auth/register', { method: 'POST', body: { email, displayName, password } }));
