@@ -1,10 +1,15 @@
 namespace PollaMundialista.Application.Contracts;
 
 // ---- Auth (module 1) ----
-public record RegisterRequest(string Email, string DisplayName, string Password);
 public record LoginRequest(string Email, string Password, string? Portal = null);
-public record UserDto(Guid Id, string Email, string DisplayName, string Role);
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+public record UserDto(Guid Id, string Email, string DisplayName, string Role, bool MustChangePassword);
 public record AuthResponse(string Token, UserDto User);
+
+// ---- Participant management (private group: the organizer creates accounts) ----
+public record CreateParticipantRequest(string Email, string DisplayName);
+public record CreateParticipantResponse(UserDto User, string TempPassword);
+public record AdminUserDto(Guid Id, string Email, string DisplayName, bool MustChangePassword, DateTime CreatedAt);
 
 // ---- Predictions (module 2) ----
 public record PredictionRequest(int HomeGoals, int AwayGoals);

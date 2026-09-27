@@ -22,8 +22,8 @@ public class LeaderboardIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Leaderboard_OrdersByPoints_ThenByExactHits()
     {
-        var (alice, _) = await RegisterAsync("alice@test.dev", "Alice");
-        var (bob, _) = await RegisterAsync("bob@test.dev", "Bob");
+        var (alice, _) = await CreateParticipantAsync("alice@test.dev", "Alice");
+        var (bob, _) = await CreateParticipantAsync("bob@test.dev", "Bob");
         var admin = await LoginAdminAsync();
 
         // Alice: exact on match 1 (3 pts). Bob: outcome on 1 and 2 (2 pts).
@@ -53,7 +53,7 @@ public class LeaderboardIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Leaderboard_NeverExposesEmails()
     {
-        var (user, _) = await RegisterAsync();
+        var (user, _) = await CreateParticipantAsync();
         var raw = await user.GetStringAsync("/api/leaderboard");
         Assert.DoesNotContain("@", raw); // displayName + ids only, no account data
     }
@@ -61,7 +61,7 @@ public class LeaderboardIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task History_ExposesOnlyFinishedMatches_ToOtherUsers()
     {
-        var (player, playerId) = await RegisterAsync("player@test.dev", "Player");
+        var (player, playerId) = await CreateParticipantAsync("player@test.dev", "Player");
         var admin = await LoginAdminAsync();
 
         await player.PutAsJsonAsync("/api/matches/1/prediction", new { homeGoals = 1, awayGoals = 1 });
@@ -69,7 +69,7 @@ public class LeaderboardIntegrationTests : IntegrationTestBase
         await admin.PostAsJsonAsync("/api/matches/1/result", new { homeGoals = 1, awayGoals = 1 });
 
         // A DIFFERENT user inspects the history from the leaderboard click.
-        var (viewer, _) = await RegisterAsync("viewer@test.dev", "Viewer");
+        var (viewer, _) = await CreateParticipantAsync("viewer@test.dev", "Viewer");
         var hist = JsonNode.Parse(await viewer.GetStringAsync($"/api/users/{playerId}/predictions"))!;
         var predictions = hist["predictions"]!.AsArray();
 
@@ -82,7 +82,7 @@ public class LeaderboardIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task History_UnknownUser_Returns404()
     {
-        var (user, _) = await RegisterAsync();
+        var (user, _) = await CreateParticipantAsync();
         var res = await user.GetAsync($"/api/users/{Guid.NewGuid()}/predictions");
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
         Assert.Equal("USER_NOT_FOUND", await ErrorCodeOf(res));

@@ -15,6 +15,8 @@ CREATE TABLE users (
     -- brute-force protection: silent temporary lockout after repeated failures
     failed_login_count int      NOT NULL DEFAULT 0,
     lockout_until  timestamptz  NULL,
+    -- private-group model: organizer-created accounts must change the temp password on first sign-in
+    must_change_password boolean NOT NULL DEFAULT false,
     CONSTRAINT uq_users_email UNIQUE (email)       -- emails stored normalized (trim+lower)
 );
 

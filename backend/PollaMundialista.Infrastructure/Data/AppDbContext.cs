@@ -25,6 +25,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.CreatedAt).HasColumnName("created_at");
             e.Property(x => x.FailedLoginCount).HasColumnName("failed_login_count");
             e.Property(x => x.LockoutUntil).HasColumnName("lockout_until");
+            e.Property(x => x.MustChangePassword).HasColumnName("must_change_password");
             e.HasIndex(x => x.Email).IsUnique().HasDatabaseName("uq_users_email");
         });
 

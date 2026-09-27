@@ -6,125 +6,171 @@ using Xunit;
 namespace PollaMundialista.Tests;
 
 /// <summary>
-/// Module 1 (auth) integration tests: real HTTP pipeline (routing, JWT, error envelope,
-/// EF Core) against a fresh database per test. These protect the SECURITY rules,
-/// not just the happy path.
+/// Auth + account-management integration tests for the PRIVATE-GROUP model:
+/// no public registration, organizer-created accounts with one-time temp
+/// passwords, a server-enforced first-login password change, silent lockout,
+/// rate limiting, portal segregation and no account enumeration.
 /// </summary>
-public class AuthIntegrationTests : IDisposable
+public class AuthIntegrationTests : IntegrationTestBase
 {
-    private readonly TestAppFactory _factory = new();
-    private readonly HttpClient _client;
-
-    public AuthIntegrationTests() => _client = _factory.CreateClient();
-
-    public void Dispose() => _factory.Dispose();
-
-    private static async Task<string> ErrorCodeOf(HttpResponseMessage res) =>
-        JsonNode.Parse(await res.Content.ReadAsStringAsync())!["error"]!["code"]!.GetValue<string>();
-
     [Fact]
     public async Task Health_ReturnsOk()
     {
-        var res = await _client.GetAsync("/health");
+        var res = await Anon.GetAsync("/health");
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
     }
 
     [Fact]
-    public async Task Register_NormalizesEmail_AndNeverCreatesAdmin()
+    public async Task PublicRegistration_DoesNotExist()
     {
-        var res = await _client.PostAsJsonAsync("/api/auth/register",
-            new { email = "  MiXeD.Case@Mail.COM ", displayName = "Mixed", password = "Password1!" });
+        // Private group: accounts are created by the organizer only.
+        var res = await Anon.PostAsJsonAsync("/api/auth/register",
+            new { email = "outsider@test.dev", displayName = "Outsider", password = "Password1!" });
+        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Organizer_CreatesParticipant_TempPasswordAndNormalizedEmail()
+    {
+        var admin = await LoginAdminAsync();
+        var res = await admin.PostAsJsonAsync("/api/admin/users",
+            new { email = "  MiXeD.Case@Mail.COM ", displayName = "Mixed Case" });
 
         Assert.Equal(HttpStatusCode.Created, res.StatusCode);
         var body = JsonNode.Parse(await res.Content.ReadAsStringAsync())!;
         Assert.Equal("mixed.case@mail.com", body["user"]!["email"]!.GetValue<string>());
-        Assert.Equal("User", body["user"]!["role"]!.GetValue<string>()); // never Admin via API
-        Assert.False(string.IsNullOrEmpty(body["token"]!.GetValue<string>()));
+        Assert.Equal("User", body["user"]!["role"]!.GetValue<string>());
+        Assert.True(body["user"]!["mustChangePassword"]!.GetValue<bool>());
+
+        // The one-time temp password satisfies the strong policy.
+        var temp = body["tempPassword"]!.GetValue<string>();
+        Assert.True(temp.Length >= 8);
+        Assert.Contains(temp, c => char.IsUpper(c));
+        Assert.Contains(temp, c => char.IsLower(c));
+        Assert.Contains(temp, c => char.IsDigit(c));
+        Assert.Contains(temp, c => !char.IsLetterOrDigit(c));
     }
 
     [Fact]
-    public async Task Register_DuplicateEmail_Returns409_EMAIL_TAKEN()
+    public async Task NonAdmin_CannotCreateParticipants()
     {
-        await _client.PostAsJsonAsync("/api/auth/register",
-            new { email = "dup@test.dev", displayName = "First", password = "Password1!" });
+        var (player, _) = await CreateParticipantAsync();
+        var res = await player.PostAsJsonAsync("/api/admin/users",
+            new { email = "sneaky@test.dev", displayName = "Sneaky" });
+        Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
+    }
 
-        // Same email, different casing — normalization must make it collide.
-        var res = await _client.PostAsJsonAsync("/api/auth/register",
-            new { email = "DUP@test.dev", displayName = "Second", password = "Password1!" });
-
+    [Fact]
+    public async Task CreateParticipant_DuplicateEmail_Returns409()
+    {
+        var admin = await LoginAdminAsync();
+        await admin.PostAsJsonAsync("/api/admin/users", new { email = "dup@test.dev", displayName = "First" });
+        var res = await admin.PostAsJsonAsync("/api/admin/users", new { email = "DUP@test.dev", displayName = "Second" });
         Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
         Assert.Equal("EMAIL_TAKEN", await ErrorCodeOf(res));
     }
 
     [Theory]
-    [InlineData("not-an-email", "Valid Name", "Password1!")] // invalid email
-    [InlineData("ok@test.dev", "X", "Password1!")]           // name too short
-    public async Task Register_InvalidInput_Returns400_VALIDATION_ERROR(string email, string name, string password)
+    [InlineData("not-an-email", "Valid Name")]
+    [InlineData("ok@test.dev", "X")]
+    public async Task CreateParticipant_InvalidInput_Returns400(string email, string name)
     {
-        var res = await _client.PostAsJsonAsync("/api/auth/register",
-            new { email, displayName = name, password });
-
+        var admin = await LoginAdminAsync();
+        var res = await admin.PostAsJsonAsync("/api/admin/users", new { email, displayName = name });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         Assert.Equal("VALIDATION_ERROR", await ErrorCodeOf(res));
     }
 
-    // Strong-password policy is SERVER-enforced: length, upper, lower, digit, symbol.
-    [Theory]
-    [InlineData("Sh0rt!!")]      // 7 chars
-    [InlineData("password1!")]   // no uppercase
-    [InlineData("PASSWORD1!")]   // no lowercase
-    [InlineData("Password!!")]   // no digit
-    [InlineData("Password11")]   // no symbol
-    public async Task Register_WeakPassword_Returns400_WEAK_PASSWORD(string password)
+    [Fact]
+    public async Task TempAccount_IsGated_UntilPasswordChange()
     {
-        var res = await _client.PostAsJsonAsync("/api/auth/register",
-            new { email = "weak@test.dev", displayName = "Weak Pass", password });
+        var admin = await LoginAdminAsync();
+        var created = await admin.PostAsJsonAsync("/api/admin/users",
+            new { email = "gated@test.dev", displayName = "Gated User" });
+        var temp = JsonNode.Parse(await created.Content.ReadAsStringAsync())!["tempPassword"]!.GetValue<string>();
 
-        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
-        Assert.Equal("WEAK_PASSWORD", await ErrorCodeOf(res));
+        var login = await Anon.PostAsJsonAsync("/api/auth/login", new { email = "gated@test.dev", password = temp });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        var tempClient = Authed(JsonNode.Parse(await login.Content.ReadAsStringAsync())!["token"]!.GetValue<string>());
+
+        // SERVER-enforced gate: nothing but change-password works with the temp session.
+        var blocked = await tempClient.GetAsync("/api/matches");
+        Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
+        Assert.Equal("PASSWORD_CHANGE_REQUIRED", await ErrorCodeOf(blocked));
+
+        // Weak new password rejected; reusing the temp rejected.
+        var weak = await tempClient.PostAsJsonAsync("/api/auth/change-password",
+            new { currentPassword = temp, newPassword = "facilita" });
+        Assert.Equal("WEAK_PASSWORD", await ErrorCodeOf(weak));
+        var same = await tempClient.PostAsJsonAsync("/api/auth/change-password",
+            new { currentPassword = temp, newPassword = temp });
+        Assert.Equal("SAME_PASSWORD", await ErrorCodeOf(same));
+
+        // Proper change issues a fresh token and lifts the gate.
+        var ok = await tempClient.PostAsJsonAsync("/api/auth/change-password",
+            new { currentPassword = temp, newPassword = "MiPropia123!" });
+        Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        var body = JsonNode.Parse(await ok.Content.ReadAsStringAsync())!;
+        Assert.False(body["user"]!["mustChangePassword"]!.GetValue<bool>());
+
+        var fresh = Authed(body["token"]!.GetValue<string>());
+        Assert.Equal(HttpStatusCode.OK, (await fresh.GetAsync("/api/matches")).StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangePassword_WrongCurrent_Returns401()
+    {
+        var (player, _) = await CreateParticipantAsync();
+        var res = await player.PostAsJsonAsync("/api/auth/change-password",
+            new { currentPassword = "no-es-esta", newPassword = "OtraFuerte1!" });
+        Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
     }
 
     [Fact]
     public async Task Login_SeededAdmin_ReturnsAdminRole()
     {
-        var res = await _client.PostAsJsonAsync("/api/auth/login",
+        var res = await Anon.PostAsJsonAsync("/api/auth/login",
             new { email = "admin@polla.dev", password = "Admin123!" });
-
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         var body = JsonNode.Parse(await res.Content.ReadAsStringAsync())!;
         Assert.Equal("Admin", body["user"]!["role"]!.GetValue<string>());
+        Assert.False(body["user"]!["mustChangePassword"]!.GetValue<bool>());
     }
 
     [Fact]
     public async Task Login_NormalizedEmail_Works_RegardlessOfCasing()
     {
-        await _client.PostAsJsonAsync("/api/auth/register",
-            new { email = "casing@test.dev", displayName = "Casing", password = "Password1!" });
-
-        var res = await _client.PostAsJsonAsync("/api/auth/login",
-            new { email = "  CASING@Test.DEV ", password = "Password1!" });
-
+        var res = await Anon.PostAsJsonAsync("/api/auth/login",
+            new { email = "  ADMIN@Polla.DEV ", password = "Admin123!" });
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_WrongPassword_And_UnknownEmail_ReturnSameError_NoEnumeration()
+    {
+        var wrongPass = await Anon.PostAsJsonAsync("/api/auth/login",
+            new { email = "user@polla.dev", password = "wrong-pass" }); // seeded demo account
+        var unknown = await Anon.PostAsJsonAsync("/api/auth/login",
+            new { email = "ghost@test.dev", password = "whatever1!" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, wrongPass.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, unknown.StatusCode);
+        Assert.Equal(await ErrorCodeOf(wrongPass), await ErrorCodeOf(unknown));
     }
 
     [Fact]
     public async Task Login_After5FailedAttempts_LocksAccount_SilentlyEvenWithCorrectPassword()
     {
-        await _client.PostAsJsonAsync("/api/auth/register",
-            new { email = "lock@test.dev", displayName = "Lock Me", password = "Password1!" });
-
         for (var i = 0; i < 5; i++)
         {
-            var bad = await _client.PostAsJsonAsync("/api/auth/login",
-                new { email = "lock@test.dev", password = "wrong-pass!" });
+            var bad = await Anon.PostAsJsonAsync("/api/auth/login",
+                new { email = "user@polla.dev", password = "wrong-pass!" });
             Assert.Equal(HttpStatusCode.Unauthorized, bad.StatusCode);
         }
 
-        // Correct password, but the account is now locked. The response is the SAME
-        // 401 INVALID_CREDENTIALS — a distinct "locked" error would leak that the
-        // account exists (silent lockout).
-        var locked = await _client.PostAsJsonAsync("/api/auth/login",
-            new { email = "lock@test.dev", password = "Password1!" });
+        // Correct password, but the account is now locked — SAME 401 (silent lockout).
+        var locked = await Anon.PostAsJsonAsync("/api/auth/login",
+            new { email = "user@polla.dev", password = "User123!" });
         Assert.Equal(HttpStatusCode.Unauthorized, locked.StatusCode);
         Assert.Equal("INVALID_CREDENTIALS", await ErrorCodeOf(locked));
     }
@@ -134,7 +180,7 @@ public class AuthIntegrationTests : IDisposable
     {
         HttpResponseMessage? last = null;
         for (var i = 0; i < 11; i++)
-            last = await _client.PostAsJsonAsync("/api/auth/login",
+            last = await Anon.PostAsJsonAsync("/api/auth/login",
                 new { email = $"rl{i}@test.dev", password = "whatever1!" });
 
         Assert.Equal((HttpStatusCode)429, last!.StatusCode);
@@ -144,44 +190,24 @@ public class AuthIntegrationTests : IDisposable
     [Fact]
     public async Task Login_PortalSegregation_IsServerEnforced_BothDirections()
     {
-        await _client.PostAsJsonAsync("/api/auth/register",
-            new { email = "portal@test.dev", displayName = "Portal User", password = "Password1!" });
-
         // Regular account through the ADMIN portal -> 403, no token issued.
-        var userOnAdmin = await _client.PostAsJsonAsync("/api/auth/login",
-            new { email = "portal@test.dev", password = "Password1!", portal = "admin" });
+        var userOnAdmin = await Anon.PostAsJsonAsync("/api/auth/login",
+            new { email = "user@polla.dev", password = "User123!", portal = "admin" });
         Assert.Equal(HttpStatusCode.Forbidden, userOnAdmin.StatusCode);
         Assert.Equal("PORTAL_MISMATCH", await ErrorCodeOf(userOnAdmin));
 
         // Admin account through the USER portal -> 403, no token issued.
-        var adminOnUser = await _client.PostAsJsonAsync("/api/auth/login",
+        var adminOnUser = await Anon.PostAsJsonAsync("/api/auth/login",
             new { email = "admin@polla.dev", password = "Admin123!", portal = "user" });
         Assert.Equal(HttpStatusCode.Forbidden, adminOnUser.StatusCode);
         Assert.Equal("PORTAL_MISMATCH", await ErrorCodeOf(adminOnUser));
 
         // Matching portals still work.
-        var okUser = await _client.PostAsJsonAsync("/api/auth/login",
-            new { email = "portal@test.dev", password = "Password1!", portal = "user" });
+        var okUser = await Anon.PostAsJsonAsync("/api/auth/login",
+            new { email = "user@polla.dev", password = "User123!", portal = "user" });
         Assert.Equal(HttpStatusCode.OK, okUser.StatusCode);
-        var okAdmin = await _client.PostAsJsonAsync("/api/auth/login",
+        var okAdmin = await Anon.PostAsJsonAsync("/api/auth/login",
             new { email = "admin@polla.dev", password = "Admin123!", portal = "admin" });
         Assert.Equal(HttpStatusCode.OK, okAdmin.StatusCode);
-    }
-
-    [Fact]
-    public async Task Login_WrongPassword_And_UnknownEmail_ReturnSameError_NoEnumeration()
-    {
-        await _client.PostAsJsonAsync("/api/auth/register",
-            new { email = "known@test.dev", displayName = "Known", password = "Password1!" });
-
-        var wrongPass = await _client.PostAsJsonAsync("/api/auth/login",
-            new { email = "known@test.dev", password = "wrong-pass" });
-        var unknown = await _client.PostAsJsonAsync("/api/auth/login",
-            new { email = "ghost@test.dev", password = "whatever1!" });
-
-        Assert.Equal(HttpStatusCode.Unauthorized, wrongPass.StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, unknown.StatusCode);
-        // Same code for both: an attacker can't tell which emails exist.
-        Assert.Equal(await ErrorCodeOf(wrongPass), await ErrorCodeOf(unknown));
     }
 }

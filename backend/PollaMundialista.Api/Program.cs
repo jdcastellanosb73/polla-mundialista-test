@@ -94,6 +94,32 @@ app.UseSwaggerUI();
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
+
+// Forced password-change gate: organizer-created accounts carry a pwd_change
+// claim until they set their own password. While it is present, every endpoint
+// except the change itself is refused — enforced server-side, not just in the UI.
+app.Use(async (ctx, next) =>
+{
+    var mustChange = ctx.User.Identity?.IsAuthenticated == true
+                     && ctx.User.HasClaim("pwd_change", "1");
+    var allowed = ctx.Request.Path.StartsWithSegments("/api/auth/change-password")
+                  || ctx.Request.Path.StartsWithSegments("/health");
+    if (mustChange && !allowed)
+    {
+        ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await ctx.Response.WriteAsJsonAsync(new
+        {
+            error = new
+            {
+                code = "PASSWORD_CHANGE_REQUIRED",
+                message = "Debes cambiar tu contraseña temporal antes de continuar.",
+            },
+        });
+        return;
+    }
+    await next();
+});
+
 app.UseAuthorization();
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));

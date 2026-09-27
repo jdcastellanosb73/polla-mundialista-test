@@ -22,7 +22,7 @@ public class ResultsIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Result_AsRegularUser_Returns403()
     {
-        var (user, _) = await RegisterAsync();
+        var (user, _) = await CreateParticipantAsync();
         var res = await user.PostAsJsonAsync("/api/matches/1/result", new { homeGoals = 1, awayGoals = 0 });
         Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
     }
@@ -39,9 +39,9 @@ public class ResultsIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Result_ScoresAllPredictions_3_1_0_AndEachUserSeesTheirOwn()
     {
-        var (exact, _) = await RegisterAsync("exact@test.dev", "Exact");
-        var (outcome, _) = await RegisterAsync("outcome@test.dev", "Outcome");
-        var (miss, _) = await RegisterAsync("miss@test.dev", "Miss");
+        var (exact, _) = await CreateParticipantAsync("exact@test.dev", "Exact");
+        var (outcome, _) = await CreateParticipantAsync("outcome@test.dev", "Outcome");
+        var (miss, _) = await CreateParticipantAsync("miss@test.dev", "Miss");
         var admin = await LoginAdminAsync();
 
         await exact.PutAsJsonAsync("/api/matches/1/prediction", new { homeGoals = 3, awayGoals = 1 });
@@ -61,7 +61,7 @@ public class ResultsIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Result_Correction_RecomputesIdempotently_NeverAccumulates()
     {
-        var (user, _) = await RegisterAsync();
+        var (user, _) = await CreateParticipantAsync();
         var admin = await LoginAdminAsync();
 
         await user.PutAsJsonAsync("/api/matches/1/prediction", new { homeGoals = 2, awayGoals = 0 });
@@ -77,7 +77,7 @@ public class ResultsIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Prediction_AfterResultLoaded_Returns409_RESULT_ALREADY_LOADED()
     {
-        var (user, _) = await RegisterAsync();
+        var (user, _) = await CreateParticipantAsync();
         var admin = await LoginAdminAsync();
         await admin.PostAsJsonAsync("/api/matches/2/result", new { homeGoals = 1, awayGoals = 1 });
 

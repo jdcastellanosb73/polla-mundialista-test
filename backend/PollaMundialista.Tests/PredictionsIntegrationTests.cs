@@ -14,7 +14,7 @@ public class PredictionsIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Seed_Creates12Matches_In2Groups_AllOpenForPredictions()
     {
-        var (user, _) = await RegisterAsync();
+        var (user, _) = await CreateParticipantAsync();
         var matches = JsonNode.Parse(await user.GetStringAsync("/api/matches"))!.AsArray();
 
         Assert.Equal(12, matches.Count);
@@ -35,7 +35,7 @@ public class PredictionsIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Prediction_Create_Then_Update_Upserts_SingleRow()
     {
-        var (user, _) = await RegisterAsync();
+        var (user, _) = await CreateParticipantAsync();
 
         var create = await user.PutAsJsonAsync("/api/matches/1/prediction", new { homeGoals = 2, awayGoals = 1 });
         Assert.Equal(HttpStatusCode.OK, create.StatusCode);
@@ -53,11 +53,11 @@ public class PredictionsIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Matches_NeverExpose_OtherUsers_Predictions()
     {
-        var (alice, _) = await RegisterAsync("alice@test.dev", "Alice");
+        var (alice, _) = await CreateParticipantAsync("alice@test.dev", "Alice");
         await alice.PutAsJsonAsync("/api/matches/1/prediction", new { homeGoals = 2, awayGoals = 1 });
 
         // Bob requests the matches list: he must NOT see Alice's prediction anywhere.
-        var (bob, _) = await RegisterAsync("bob@test.dev", "Bob");
+        var (bob, _) = await CreateParticipantAsync("bob@test.dev", "Bob");
         var raw = await bob.GetStringAsync("/api/matches");
         var matches = JsonNode.Parse(raw)!.AsArray();
 
@@ -70,7 +70,7 @@ public class PredictionsIntegrationTests : IntegrationTestBase
     [InlineData(0, 100)]
     public async Task Prediction_GoalsOutOfRange_Returns400(int home, int away)
     {
-        var (user, _) = await RegisterAsync();
+        var (user, _) = await CreateParticipantAsync();
         var res = await user.PutAsJsonAsync("/api/matches/1/prediction", new { homeGoals = home, awayGoals = away });
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         Assert.Equal("VALIDATION_ERROR", await ErrorCodeOf(res));
@@ -79,7 +79,7 @@ public class PredictionsIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Prediction_UnknownMatch_Returns404()
     {
-        var (user, _) = await RegisterAsync();
+        var (user, _) = await CreateParticipantAsync();
         var res = await user.PutAsJsonAsync("/api/matches/999/prediction", new { homeGoals = 1, awayGoals = 0 });
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
         Assert.Equal("MATCH_NOT_FOUND", await ErrorCodeOf(res));
@@ -88,7 +88,7 @@ public class PredictionsIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Prediction_AfterKickoff_Returns409_MATCH_ALREADY_STARTED()
     {
-        var (user, _) = await RegisterAsync();
+        var (user, _) = await CreateParticipantAsync();
         MakeMatchStarted(3);
 
         var res = await user.PutAsJsonAsync("/api/matches/3/prediction", new { homeGoals = 1, awayGoals = 0 });

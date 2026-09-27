@@ -14,6 +14,10 @@ public class User
     public int FailedLoginCount { get; set; }
     public DateTime? LockoutUntil { get; set; }
 
+    // Private-group model: accounts are created by the organizer with a temp
+    // password; the first sign-in forces a password change.
+    public bool MustChangePassword { get; set; }
+
     public List<Prediction> Predictions { get; set; } = new();
 }
 
