@@ -3,6 +3,7 @@ import { useAuth } from './auth.jsx';
 import Login from './pages/Login.jsx';
 import Matches from './pages/Matches.jsx';
 import Admin from './pages/Admin.jsx';
+import Leaderboard from './pages/Leaderboard.jsx';
 
 function RequireAuth({ children, role }) {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ function Nav() {
       <span className="nav-brand"><span className="ball">⚽</span>Polla Mundialista</span>
       <div className="nav-links">
         <NavLink to="/" end>Partidos</NavLink>
+        <NavLink to="/leaderboard">Ranking</NavLink>
         {user.role === 'Admin' && <NavLink to="/admin">Admin</NavLink>}
       </div>
       <div className="nav-user">
@@ -39,6 +41,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<RequireAuth><Matches /></RequireAuth>} />
+          <Route path="/leaderboard" element={<RequireAuth><Leaderboard /></RequireAuth>} />
           <Route path="/admin" element={<RequireAuth role="Admin"><Admin /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
