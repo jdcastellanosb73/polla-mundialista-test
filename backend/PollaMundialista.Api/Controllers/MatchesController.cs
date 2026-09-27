@@ -38,7 +38,7 @@ public class MatchesController(AppDbContext db, ScoringService scoring) : Contro
             m.Id, m.GroupCode, m.HomeTeam, m.AwayTeam, m.KickoffAt,
             IsOpen: m.IsOpenForPredictions(now),
             Result: m.ResultLoadedAt != null
-                ? new MatchScoreDto(m.HomeGoals!.Value, m.AwayGoals!.Value)
+                ? new MatchScoreDto(m.HomeGoals!.Value, m.AwayGoals!.Value, m.ResultLoadedAt.Value)
                 : null,
             MyPrediction: mine.TryGetValue(m.Id, out var p)
                 ? new MyPredictionDto(p.HomeGoals, p.AwayGoals, p.Points)

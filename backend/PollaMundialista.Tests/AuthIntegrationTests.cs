@@ -127,6 +127,33 @@ public class AuthIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task Login_PortalSegregation_IsServerEnforced_BothDirections()
+    {
+        await _client.PostAsJsonAsync("/api/auth/register",
+            new { email = "portal@test.dev", displayName = "Portal User", password = "Password1!" });
+
+        // Regular account through the ADMIN portal -> 403, no token issued.
+        var userOnAdmin = await _client.PostAsJsonAsync("/api/auth/login",
+            new { email = "portal@test.dev", password = "Password1!", portal = "admin" });
+        Assert.Equal(HttpStatusCode.Forbidden, userOnAdmin.StatusCode);
+        Assert.Equal("PORTAL_MISMATCH", await ErrorCodeOf(userOnAdmin));
+
+        // Admin account through the USER portal -> 403, no token issued.
+        var adminOnUser = await _client.PostAsJsonAsync("/api/auth/login",
+            new { email = "admin@polla.dev", password = "Admin123!", portal = "user" });
+        Assert.Equal(HttpStatusCode.Forbidden, adminOnUser.StatusCode);
+        Assert.Equal("PORTAL_MISMATCH", await ErrorCodeOf(adminOnUser));
+
+        // Matching portals still work.
+        var okUser = await _client.PostAsJsonAsync("/api/auth/login",
+            new { email = "portal@test.dev", password = "Password1!", portal = "user" });
+        Assert.Equal(HttpStatusCode.OK, okUser.StatusCode);
+        var okAdmin = await _client.PostAsJsonAsync("/api/auth/login",
+            new { email = "admin@polla.dev", password = "Admin123!", portal = "admin" });
+        Assert.Equal(HttpStatusCode.OK, okAdmin.StatusCode);
+    }
+
+    [Fact]
     public async Task Login_WrongPassword_And_UnknownEmail_ReturnSameError_NoEnumeration()
     {
         await _client.PostAsJsonAsync("/api/auth/register",

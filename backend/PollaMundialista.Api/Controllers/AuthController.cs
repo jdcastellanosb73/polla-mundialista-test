@@ -106,6 +106,21 @@ public class AuthController(AppDbContext db, TokenService tokens, ILogger<AuthCo
             await db.SaveChangesAsync();
         }
 
+        // Portal segregation, SERVER-enforced: each access page only signs in its
+        // own role. Checked after password verification, so this cannot be used
+        // to enumerate roles without valid credentials.
+        var portalMismatch =
+            (req.Portal == "admin" && user.Role != Roles.Admin) ||
+            (req.Portal == "user" && user.Role == Roles.Admin);
+        if (portalMismatch)
+        {
+            logger.LogWarning("Login rejected: {UserId} attempted the wrong portal ({Portal})", user.Id, req.Portal);
+            throw new AppException(403, "PORTAL_MISMATCH",
+                user.Role == Roles.Admin
+                    ? "Esta cuenta es de organizador. Usa el acceso para organizadores."
+                    : "Esta cuenta no tiene acceso de organizador. Usa el acceso de participantes.");
+        }
+
         logger.LogInformation("Login ok: {UserId}", user.Id);
         return new AuthResponse(tokens.Create(user), ToDto(user));
     }
