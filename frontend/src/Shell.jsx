@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from './auth.jsx';
 import { api } from './api.js';
+import { TrophyIcon } from './icons.jsx';
 
 // App shell after sign-in: navy sidebar (brand, user, role-aware nav, context
 // card) + light content area. Matches the dashboard design system.
@@ -57,7 +58,7 @@ export default function Shell() {
     <div className="shell">
       <aside className="sidebar">
         <div className="sb-brand">
-          <span className="mark">🏆</span>
+          <span className="mark"><TrophyIcon size={20} /></span>
           <span className="name">polla<em>Mundial</em></span>
         </div>
 

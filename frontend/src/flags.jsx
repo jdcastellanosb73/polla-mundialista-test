@@ -1,5 +1,6 @@
 // Team → bundled SVG flag. Local assets (no runtime CDN dependency) because
 // emoji flags render as plain letter codes on Windows/Chrome.
+import { FlagFallbackIcon } from './icons.jsx';
 import ar from './assets/flags/ar.svg';
 import de from './assets/flags/de.svg';
 import fr from './assets/flags/fr.svg';
@@ -22,6 +23,6 @@ const FLAGS = {
 
 export function Flag({ name }) {
   const src = FLAGS[name];
-  if (!src) return <span className="flag" aria-hidden="true">🏳️</span>;
+  if (!src) return <span className="flag flag-fallback" aria-hidden="true"><FlagFallbackIcon size={14} /></span>;
   return <img className="flag-img" src={src} alt="" aria-hidden="true" loading="lazy" />;
 }

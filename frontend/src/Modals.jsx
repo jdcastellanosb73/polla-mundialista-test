@@ -1,4 +1,5 @@
 import { Flag } from './flags.jsx';
+import { TrophyIcon, ListIcon } from './icons.jsx';
 
 // Post-result popups: a summary of newly scored matches when the user comes
 // back, and a one-time champion announcement when the tournament completes.
@@ -35,8 +36,8 @@ function ModalShell({ children, onClose, label }) {
 }
 
 const pointsLabel = (p) =>
-  p === 3 ? ['exact', '🎯 Marcador exacto', '+3 pts']
-    : p === 1 ? ['outcome', '✔ Acertaste el resultado', '+1 pt']
+  p === 3 ? ['exact', 'Marcador exacto', '+3 pts']
+    : p === 1 ? ['outcome', 'Acertaste el resultado', '+1 pt']
     : p === 0 ? ['miss', 'No acertaste', '+0 pts']
     : ['miss', 'Sin predicción', '+0 pts'];
 
@@ -46,7 +47,7 @@ export function ResultsSummaryModal({ items, totalPoints, onClose }) {
   return (
     <ModalShell onClose={onClose} label="Resumen de resultados">
       <div className="modal-head">
-        <span className="modal-emoji">📋</span>
+        <span className="modal-icon"><ListIcon size={26} /></span>
         <h2>¡Hay resultados nuevos!</h2>
         <p className="muted">
           {items.length === 1 ? 'Se jugó 1 partido' : `Se jugaron ${items.length} partidos`} desde tu última visita.
@@ -87,7 +88,7 @@ export function ChampionModal({ champion, isYou, onClose }) {
   return (
     <ModalShell onClose={onClose} label="Campeón del torneo">
       <div className="modal-head champion">
-        <span className="modal-emoji big">🏆</span>
+        <span className="modal-icon big"><TrophyIcon size={34} /></span>
         <h2>{isYou ? '¡Eres el campeón de la polla!' : '¡Tenemos campeón!'}</h2>
         <p className="muted">Los 12 partidos del torneo están finalizados.</p>
       </div>
@@ -99,7 +100,7 @@ export function ChampionModal({ champion, isYou, onClose }) {
         </div>
         <div className="muted" style={{ fontSize: '0.8rem' }}>Desempate por marcadores exactos.</div>
       </div>
-      {isYou && <p className="champion-cheer">Nadie leyó la cancha como tú. 👏</p>}
+      {isYou && <p className="champion-cheer">Nadie leyó la cancha como tú.</p>}
     </ModalShell>
   );
 }

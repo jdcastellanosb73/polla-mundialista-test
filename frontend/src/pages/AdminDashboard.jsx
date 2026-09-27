@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import { ChampionModal, championSeen, markChampionSeen } from '../Modals.jsx';
+import { TrophyIcon, ChartIcon } from '../icons.jsx';
 
 // Organizer home: live stats, result loading with a match selector and a big
 // score preview (design system), and a real activity feed derived from the
@@ -91,14 +92,14 @@ export default function AdminDashboard() {
 
   const activity = [
     ...(leader && leader.points > 0 ? [{
-      icon: '🏆',
+      icon: <TrophyIcon size={16} />,
       title: `${leader.displayName} lidera el ranking`,
       detail: `${leader.points} puntos acumulados`,
       time: 'Ahora',
       key: 'leader',
     }] : []),
     ...lastLoaded.slice(0, 5).map((m) => ({
-      icon: '📊',
+      icon: <ChartIcon size={16} />,
       title: `${m.homeTeam} ${m.result.homeGoals} — ${m.result.awayGoals} ${m.awayTeam}`,
       detail: 'Resultado cargado y predicciones puntuadas',
       time: m.result.loadedAt ? timeAgo(m.result.loadedAt) : '',

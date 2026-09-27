@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { API_BASE } from './api.js';
+import { TrophyIcon, BallIcon } from './icons.jsx';
 
 // Free-tier hosts (Render) put the API to sleep after idle periods; the first
 // request can take 30-60s. Without this gate the login just looks frozen.
@@ -61,11 +62,11 @@ export default function ServerWakeGate({ children }) {
   return (
     <div className="wake-screen">
       <div className="hero-brand wake-brand">
-        <span className="hero-brand-mark">🏆</span>
+        <span className="hero-brand-mark"><TrophyIcon size={24} /></span>
         <span className="hero-brand-name">polla<em>Mundial</em></span>
       </div>
       <div className="wake-card">
-        <span className="wake-ball">⚽</span>
+        <span className="wake-ball"><BallIcon size={32} /></span>
         {status === 'waking' ? (
           <>
             <h1>Despertando el servidor…</h1>

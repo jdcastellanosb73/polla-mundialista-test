@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
+import { TrophyIcon } from '../icons.jsx';
 
 // Split-screen access pages (participants and organizers). PRIVATE-GROUP model:
 // there is no self-registration — the organizer creates every account and hands
@@ -61,7 +62,7 @@ export function Hero({ variant }) {
     <aside className="login-hero">
       <div className="hero-top">
         <div className="hero-brand">
-          <span className="hero-brand-mark">🏆</span>
+          <span className="hero-brand-mark"><TrophyIcon size={24} /></span>
           <span className="hero-brand-name">polla<em>Mundial</em></span>
         </div>
         {admin && (

@@ -8,6 +8,7 @@ import {
   ChampionModal, ResultsSummaryModal,
   championSeen, markChampionSeen, markSeen, readSeen,
 } from '../Modals.jsx';
+import { CrownIcon } from '../icons.jsx';
 
 // Participant home: greeting, live stats and an ACTIVE leaderboard — avatars,
 // crown for the leader, points bars relative to the top score, own row
@@ -69,7 +70,7 @@ function LeaderboardRow({ row, rank, isMe, leaderPoints, open, onToggle }) {
         role="button" aria-expanded={open}>
         <span className={`lb-rank${rank <= 3 ? ` top${rank}` : ''}`}>{rank}</span>
         <span className="lb-avatar" style={{ background: `hsl(${hueOf(row.displayName)} 45% 45%)` }}>
-          {rank === 1 && <span className="lb-crown">👑</span>}
+          {rank === 1 && <span className="lb-crown"><CrownIcon size={14} /></span>}
           {initialsOf(row.displayName)}
         </span>
         <span className="lb-info">

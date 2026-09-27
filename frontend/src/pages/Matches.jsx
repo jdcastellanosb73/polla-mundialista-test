@@ -16,8 +16,8 @@ function Team({ name }) {
 
 function PointsBadge({ points }) {
   if (points === null || points === undefined) return null;
-  if (points === 3) return <span className="badge badge-gold">🎯 3 pts · marcador exacto</span>;
-  if (points === 1) return <span className="badge badge-silver">✔ 1 pt · acertó resultado</span>;
+  if (points === 3) return <span className="badge badge-gold">3 pts · marcador exacto</span>;
+  if (points === 1) return <span className="badge badge-silver">1 pt · acertó resultado</span>;
   return <span className="badge badge-muted">0 pts</span>;
 }
 
@@ -51,7 +51,7 @@ function MatchRow({ match, onSaved }) {
         <span className="vs">vs</span>
         <Team name={match.awayTeam} />
       </div>
-      <div className="match-kickoff">🕐 {fmtKickoff(match.kickoffAt)}</div>
+      <div className="match-kickoff">{fmtKickoff(match.kickoffAt)}</div>
 
       {match.result ? (
         <div className="match-final">
