@@ -1,0 +1,62 @@
+name: Deploy frontend to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/configure-pages@v5
+
+      - run: npm ci
+
+      - run: npm run build
+        env:
+          # The app is served under /<repo>/ on GitHub Pages
+          BASE_PATH: /polla-mundialista-test/
+          # API base URL; override without commits via the repository variable API_URL
+          VITE_API_URL: ${{ vars.API_URL || 'https://polla-api.onrender.com' }}
+
+      # SPA fallback: GitHub Pages serves 404.html for unknown routes (e.g. a
+      # refresh on /login). Serving the app there lets the router take over.
+      - run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

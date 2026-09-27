@@ -18,7 +18,7 @@ export async function api(path, { method = 'GET', body } = {}) {
   if (res.status === 401 && !path.startsWith('/api/auth')) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.assign('/login');
+    window.location.assign(import.meta.env.BASE_URL + 'login'); // respects the deploy base path
     throw { code: 'UNAUTHORIZED', message: 'Sesión expirada' };
   }
 
