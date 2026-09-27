@@ -23,6 +23,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.PasswordHash).HasColumnName("password_hash").HasMaxLength(100).IsRequired();
             e.Property(x => x.Role).HasColumnName("role").HasMaxLength(10).IsRequired();
             e.Property(x => x.CreatedAt).HasColumnName("created_at");
+            e.Property(x => x.FailedLoginCount).HasColumnName("failed_login_count");
+            e.Property(x => x.LockoutUntil).HasColumnName("lockout_until");
             e.HasIndex(x => x.Email).IsUnique().HasDatabaseName("uq_users_email");
         });
 

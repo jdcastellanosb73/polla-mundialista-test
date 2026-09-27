@@ -9,6 +9,11 @@ public class User
     public string Role { get; set; } = Roles.User;    // "User" | "Admin"
     public DateTime CreatedAt { get; set; }
 
+    // Brute-force protection: after N failed logins the account locks temporarily.
+    // The lockout is SILENT (same 401) — revealing it would reveal the account exists.
+    public int FailedLoginCount { get; set; }
+    public DateTime? LockoutUntil { get; set; }
+
     public List<Prediction> Predictions { get; set; } = new();
 }
 

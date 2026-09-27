@@ -93,6 +93,40 @@ public class AuthIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task Login_After5FailedAttempts_LocksAccount_SilentlyEvenWithCorrectPassword()
+    {
+        await _client.PostAsJsonAsync("/api/auth/register",
+            new { email = "lock@test.dev", displayName = "Lock Me", password = "Password1!" });
+
+        for (var i = 0; i < 5; i++)
+        {
+            var bad = await _client.PostAsJsonAsync("/api/auth/login",
+                new { email = "lock@test.dev", password = "wrong-pass!" });
+            Assert.Equal(HttpStatusCode.Unauthorized, bad.StatusCode);
+        }
+
+        // Correct password, but the account is now locked. The response is the SAME
+        // 401 INVALID_CREDENTIALS — a distinct "locked" error would leak that the
+        // account exists (silent lockout).
+        var locked = await _client.PostAsJsonAsync("/api/auth/login",
+            new { email = "lock@test.dev", password = "Password1!" });
+        Assert.Equal(HttpStatusCode.Unauthorized, locked.StatusCode);
+        Assert.Equal("INVALID_CREDENTIALS", await ErrorCodeOf(locked));
+    }
+
+    [Fact]
+    public async Task AuthEndpoints_RateLimited_With429_After10RequestsInAMinute()
+    {
+        HttpResponseMessage? last = null;
+        for (var i = 0; i < 11; i++)
+            last = await _client.PostAsJsonAsync("/api/auth/login",
+                new { email = $"rl{i}@test.dev", password = "whatever1!" });
+
+        Assert.Equal((HttpStatusCode)429, last!.StatusCode);
+        Assert.Equal("RATE_LIMITED", await ErrorCodeOf(last));
+    }
+
+    [Fact]
     public async Task Login_WrongPassword_And_UnknownEmail_ReturnSameError_NoEnumeration()
     {
         await _client.PostAsJsonAsync("/api/auth/register",

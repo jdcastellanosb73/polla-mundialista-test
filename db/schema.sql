@@ -12,6 +12,9 @@ CREATE TABLE users (
     password_hash  varchar(100) NOT NULL,          -- BCrypt
     role           varchar(10)  NOT NULL DEFAULT 'User',  -- 'User' | 'Admin'
     created_at     timestamptz  NOT NULL DEFAULT now(),
+    -- brute-force protection: silent temporary lockout after repeated failures
+    failed_login_count int      NOT NULL DEFAULT 0,
+    lockout_until  timestamptz  NULL,
     CONSTRAINT uq_users_email UNIQUE (email)       -- emails stored normalized (trim+lower)
 );
 
