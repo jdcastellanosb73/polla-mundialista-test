@@ -5,10 +5,10 @@ import Matches from './pages/Matches.jsx';
 import Admin from './pages/Admin.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
 
-function RequireAuth({ children, role }) {
+function RequireAuth({ children, role, loginPath = '/login' }) {
   const { user } = useAuth();
   const location = useLocation();
-  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!user) return <Navigate to={loginPath} state={{ from: location }} replace />;
   // UI-level guard only — the API enforces roles on every endpoint regardless.
   if (role && user.role !== role) return <Navigate to="/" replace />;
   return children;
@@ -39,10 +39,11 @@ export default function App() {
       <Nav />
       <main className="container">
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Login variant="user" />} />
+          <Route path="/admin/login" element={<Login variant="admin" />} />
           <Route path="/" element={<RequireAuth><Matches /></RequireAuth>} />
           <Route path="/leaderboard" element={<RequireAuth><Leaderboard /></RequireAuth>} />
-          <Route path="/admin" element={<RequireAuth role="Admin"><Admin /></RequireAuth>} />
+          <Route path="/admin" element={<RequireAuth role="Admin" loginPath="/admin/login"><Admin /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

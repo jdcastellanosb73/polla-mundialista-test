@@ -72,6 +72,7 @@ export default function Leaderboard() {
         </div>
       </div>
       <section className="card">
+        <div className="table-wrap">
         <table className="table">
           <thead>
             <tr>
@@ -104,6 +105,7 @@ export default function Leaderboard() {
             ))}
           </tbody>
         </table>
+        </div>
       </section>
     </div>
   );

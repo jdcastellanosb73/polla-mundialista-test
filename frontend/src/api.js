@@ -2,7 +2,8 @@
 // ({ error: { code, message } }) and expires the session on 401.
 // 30 lines that replace an axios dependency.
 
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5180';
+export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5180';
+const BASE = API_BASE;
 
 export async function api(path, { method = 'GET', body } = {}) {
   const token = localStorage.getItem('token');
