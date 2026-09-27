@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
+import { useAuth } from '../auth.jsx';
+import { ChampionModal, championSeen, markChampionSeen } from '../Modals.jsx';
 
 // Organizer home: live stats, result loading with a match selector and a big
 // score preview (design system), and a real activity feed derived from the
@@ -24,6 +26,8 @@ const fmtKickoff = (iso) =>
   new Date(iso).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
+  const [showChampion, setShowChampion] = useState(false);
   const [matches, setMatches] = useState(null);
   const [leaders, setLeaders] = useState([]);
   const [error, setError] = useState(null);
@@ -35,7 +39,12 @@ export default function AdminDashboard() {
 
   const load = () =>
     Promise.all([api('/api/matches'), api('/api/leaderboard')])
-      .then(([ms, lb]) => { setMatches(ms); setLeaders(lb); })
+      .then(([ms, lb]) => {
+        setMatches(ms);
+        setLeaders(lb);
+        const done = ms.length > 0 && ms.every((m) => m.result);
+        if (done && !championSeen(user.id)) setShowChampion(true);
+      })
       .catch((e) => setError(e.message));
 
   useEffect(() => { load(); }, []);
@@ -99,6 +108,11 @@ export default function AdminDashboard() {
 
   return (
     <>
+      {showChampion && leaders[0] && (
+        <ChampionModal champion={leaders[0]} isYou={false}
+          onClose={() => { markChampionSeen(user.id); setShowChampion(false); }} />
+      )}
+
       <span className="page-kicker">CENTRO DE CONTROL · MUNDIAL 2026</span>
       <h1>Hola, organizador</h1>
       <p className="page-sub">Gestiona los resultados y mantén la competencia al día.</p>

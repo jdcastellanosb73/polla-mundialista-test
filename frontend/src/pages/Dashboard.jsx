@@ -4,6 +4,10 @@ import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import { initialsOf } from '../Shell.jsx';
 import { Flag } from '../flags.jsx';
+import {
+  ChampionModal, ResultsSummaryModal,
+  championSeen, markChampionSeen, markSeen, readSeen,
+} from '../Modals.jsx';
 
 // Participant home: greeting, live stats and an ACTIVE leaderboard — avatars,
 // crown for the leader, points bars relative to the top score, own row
@@ -94,18 +98,43 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [rows, setRows] = useState(null);
   const [myHistory, setMyHistory] = useState(null);
+  const [matches, setMatches] = useState(null);
   const [error, setError] = useState(null);
   const [query, setQuery] = useState('');
   const [openUser, setOpenUser] = useState(null);
+  const [popup, setPopup] = useState(null); // {type:'results', items} | {type:'champion'}
 
   useEffect(() => {
     Promise.all([
       api('/api/leaderboard'),
       api(`/api/users/${user.id}/predictions`),
+      api('/api/matches'),
     ])
-      .then(([lb, hist]) => { setRows(lb); setMyHistory(hist); })
+      .then(([lb, hist, ms]) => {
+        setRows(lb);
+        setMyHistory(hist);
+        setMatches(ms);
+
+        // Post-result popups: newly scored matches first, champion afterwards.
+        const finished = ms.filter((m) => m.result);
+        const seen = readSeen(user.id);
+        const newly = finished.filter((m) => seen[m.id] !== m.result.loadedAt);
+        const done = ms.length > 0 && finished.length === ms.length;
+        if (newly.length > 0) setPopup({ type: 'results', items: newly, done });
+        else if (done && !championSeen(user.id)) setPopup({ type: 'champion' });
+      })
       .catch((e) => setError(e.message));
   }, [user.id]);
+
+  const closeResults = () => {
+    markSeen(user.id, matches.filter((m) => m.result));
+    if (popup.done && !championSeen(user.id)) setPopup({ type: 'champion' });
+    else setPopup(null);
+  };
+  const closeChampion = () => {
+    markChampionSeen(user.id);
+    setPopup(null);
+  };
 
   if (error) return <div className="error-box" style={{ marginTop: '1.5rem' }}>{error}</div>;
   if (!rows) return <div className="loading"><span className="spinner" /> Cargando tu polla…</div>;
@@ -120,6 +149,13 @@ export default function Dashboard() {
 
   return (
     <>
+      {popup?.type === 'results' && (
+        <ResultsSummaryModal items={popup.items} totalPoints={me?.points ?? 0} onClose={closeResults} />
+      )}
+      {popup?.type === 'champion' && rows[0] && (
+        <ChampionModal champion={rows[0]} isYou={rows[0].userId === user.id} onClose={closeChampion} />
+      )}
+
       <span className="page-kicker">MUNDIAL 2026 · POLLA OFICIAL</span>
       <h1>Hola, {firstName}</h1>
       <p className="page-sub">Así va tu participación en el torneo.</p>
