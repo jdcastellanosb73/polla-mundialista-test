@@ -16,3 +16,11 @@ public record MatchDto(
 
 // ---- Results (module 3) ----
 public record ResultRequest(int HomeGoals, int AwayGoals);
+
+// ---- Leaderboard & history (module 4) ----
+public record LeaderboardRowDto(Guid UserId, string DisplayName, int Points, int ExactHits, int ScoredPredictions);
+
+public record UserPredictionDto(
+    int MatchId, string GroupCode, string HomeTeam, string AwayTeam, DateTime KickoffAt,
+    int RealHomeGoals, int RealAwayGoals, int PredictedHomeGoals, int PredictedAwayGoals, int? Points);
+public record UserHistoryDto(Guid UserId, string DisplayName, List<UserPredictionDto> Predictions);
