@@ -60,6 +60,10 @@ export default function ServerWakeGate({ children }) {
 
   return (
     <div className="wake-screen">
+      <div className="hero-brand wake-brand">
+        <span className="hero-brand-mark">🏆</span>
+        <span className="hero-brand-name">polla<em>Mundial</em></span>
+      </div>
       <div className="wake-card">
         <span className="wake-ball">⚽</span>
         {status === 'waking' ? (
@@ -78,8 +82,8 @@ export default function ServerWakeGate({ children }) {
             <p className="muted">
               Llevamos más de dos minutos intentando. Puede ser un problema temporal del hosting.
             </p>
-            <button className="btn btn-primary" onClick={() => window.location.reload()}>
-              Reintentar
+            <button className="login-cta wake-retry" onClick={() => window.location.reload()}>
+              Reintentar →
             </button>
           </>
         )}
