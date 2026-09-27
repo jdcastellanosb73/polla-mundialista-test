@@ -9,6 +9,7 @@ import {
   championSeen, markChampionSeen, markSeen, readSeen,
 } from '../Modals.jsx';
 import { CrownIcon } from '../icons.jsx';
+import { useLang } from '../i18n.jsx';
 
 // Participant home: greeting, live stats and an ACTIVE leaderboard — avatars,
 // crown for the leader, points bars relative to the top score, own row
@@ -27,27 +28,31 @@ const SearchIcon = () => (
   </svg>
 );
 
-function HistoryItems({ predictions, compact }) {
+// `own` switches the labels to second person ("Acertaste…") for the signed-in
+// user's rows; anyone else's history reads in third person ("Acertó…").
+function HistoryItems({ predictions, compact, own }) {
+  const { t, team } = useLang();
   if (!predictions.length)
-    return <p className="lb-empty">Sin predicciones puntuadas todavía — se muestran solo partidos finalizados.</p>;
+    return <p className="lb-empty">{t('hist.empty')}</p>;
+  const suffix = own ? 'you' : 'other';
   return predictions.map((p) => {
     const label = p.points === 3
-      ? ['exact', 'Acertaste el marcador']
-      : p.points === 1 ? ['outcome', 'Acertaste el resultado'] : ['miss', 'No acertaste'];
+      ? ['exact', t(`hist.exact_${suffix}`)]
+      : p.points === 1 ? ['outcome', t(`hist.outcome_${suffix}`)] : ['miss', t(`hist.miss_${suffix}`)];
     return (
       <div className="hist-item" key={p.matchId}>
         <div className="hist-teams">
-          <span><Flag name={p.homeTeam} /> {p.homeTeam}</span>
+          <span><Flag name={p.homeTeam} /> {team(p.homeTeam)}</span>
           <span className="vs">vs</span>
-          <span>{p.awayTeam} <Flag name={p.awayTeam} /></span>
+          <span>{team(p.awayTeam)} <Flag name={p.awayTeam} /></span>
         </div>
         <div className="hist-line">
           <span className="hist-score">{p.realHomeGoals} — {p.realAwayGoals}</span>
           <span className={`hist-label ${label[0]}`}>{label[1]}</span>
           <span className="hist-pts">+{p.points} pts</span>
         </div>
-        {!compact && (
-          <div className="hist-pred">Tu predicción: {p.predictedHomeGoals} — {p.predictedAwayGoals}</div>
+        {!compact && own && (
+          <div className="hist-pred">{t('hist.your_pred', { h: p.predictedHomeGoals, a: p.predictedAwayGoals })}</div>
         )}
       </div>
     );
@@ -55,6 +60,7 @@ function HistoryItems({ predictions, compact }) {
 }
 
 function LeaderboardRow({ row, rank, isMe, leaderPoints, open, onToggle }) {
+  const { t } = useLang();
   const [history, setHistory] = useState(null);
 
   useEffect(() => {
@@ -76,9 +82,9 @@ function LeaderboardRow({ row, rank, isMe, leaderPoints, open, onToggle }) {
         <span className="lb-info">
           <span className="lb-name">
             {row.displayName}
-            {isMe && <span className="you-chip">TÚ</span>}
+            {isMe && <span className="you-chip">{t('dash.you')}</span>}
           </span>
-          <span className="lb-sub">{row.exactHits} marcadores exactos · {row.scoredPredictions} puntuadas</span>
+          <span className="lb-sub">{t('dash.sub_row', { e: row.exactHits, s: row.scoredPredictions })}</span>
           <span className="lb-track"><span className="lb-fill" style={{ width: `${pct}%` }} /></span>
         </span>
         <span className="lb-pts">{row.points} <small>pts</small></span>
@@ -87,8 +93,8 @@ function LeaderboardRow({ row, rank, isMe, leaderPoints, open, onToggle }) {
       {open && (
         <div className="lb-expand">
           {history === null
-            ? <div className="loading"><span className="spinner" /> Cargando historial…</div>
-            : <HistoryItems predictions={history.predictions} compact />}
+            ? <div className="loading"><span className="spinner" /> {t('dash.loading_history')}</div>
+            : <HistoryItems predictions={history.predictions} compact own={isMe} />}
         </div>
       )}
     </>
@@ -97,6 +103,7 @@ function LeaderboardRow({ row, rank, isMe, leaderPoints, open, onToggle }) {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { t, terr } = useLang();
   const [rows, setRows] = useState(null);
   const [myHistory, setMyHistory] = useState(null);
   const [matches, setMatches] = useState(null);
@@ -136,7 +143,7 @@ export default function Dashboard() {
           return null;
         });
       })
-      .catch((e) => { if (!cancelled && !hasData) setError(e.message); });
+      .catch((e) => { if (!cancelled && !hasData) setError(e); });
 
     load();
     const timer = setInterval(load, 30000);
@@ -159,8 +166,8 @@ export default function Dashboard() {
     setPopup(null);
   };
 
-  if (error) return <div className="error-box" style={{ marginTop: '1.5rem' }}>{error}</div>;
-  if (!rows) return <div className="loading"><span className="spinner" /> Cargando tu polla…</div>;
+  if (error) return <div className="error-box" style={{ marginTop: '1.5rem' }}>{terr(error)}</div>;
+  if (!rows) return <div className="loading"><span className="spinner" /> {t('dash.loading')}</div>;
 
   const myIndex = rows.findIndex((r) => r.userId === user.id);
   const me = rows[myIndex];
@@ -179,42 +186,42 @@ export default function Dashboard() {
         <ChampionModal champion={rows[0]} isYou={rows[0].userId === user.id} onClose={closeChampion} />
       )}
 
-      <span className="page-kicker">MUNDIAL 2026 · POLLA OFICIAL</span>
-      <h1>Hola, {firstName}</h1>
-      <p className="page-sub">Así va tu participación en el torneo.</p>
+      <span className="page-kicker">{t('dash.kicker')}</span>
+      <h1>{t('dash.hello', { name: firstName })}</h1>
+      <p className="page-sub">{t('dash.sub')}</p>
 
       <div className="stats-row">
         <div className="stat-card accent">
-          <div className="stat-label">Tu posición</div>
+          <div className="stat-label">{t('dash.pos')}</div>
           <div className="stat-value">#{myIndex + 1}</div>
-          <div className="stat-hint">de {rows.length} participantes</div>
+          <div className="stat-hint">{t('dash.pos_hint', { n: rows.length })}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Puntos acumulados</div>
+          <div className="stat-label">{t('dash.points')}</div>
           <div className="stat-value">{me?.points ?? 0}</div>
-          <div className="stat-hint">en {me?.scoredPredictions ?? 0} predicciones puntuadas</div>
+          <div className="stat-hint">{t('dash.points_hint', { n: me?.scoredPredictions ?? 0 })}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Marcadores exactos</div>
+          <div className="stat-label">{t('dash.exact')}</div>
           <div className="stat-value">{me?.exactHits ?? 0}</div>
-          <div className="stat-hint">de {me?.scoredPredictions ?? 0} partidos jugados</div>
+          <div className="stat-hint">{t('dash.exact_hint', { n: me?.scoredPredictions ?? 0 })}</div>
         </div>
       </div>
 
       <div className="dash-grid">
         <section className="panel">
           <div className="panel-head">
-            <h2>Leaderboard</h2>
-            <Link className="panel-link" to="/pronosticos">Hacer pronósticos →</Link>
+            <h2>{t('dash.leaderboard')}</h2>
+            <Link className="panel-link" to="/pronosticos">{t('dash.make_predictions')}</Link>
           </div>
-          <p className="panel-sub">La carrera por el primer lugar — toca un participante para ver su historial.</p>
+          <p className="panel-sub">{t('dash.race')}</p>
 
           <div className="lb-search">
             <SearchIcon />
-            <input placeholder="Buscar participante" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <input placeholder={t('dash.search')} value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
 
-          {filtered.length === 0 && <p className="lb-empty">Nadie coincide con "{query}".</p>}
+          {filtered.length === 0 && <p className="lb-empty">{t('dash.no_match', { q: query })}</p>}
           {filtered.map(({ row, rank }) => (
             <LeaderboardRow key={row.userId} row={row} rank={rank}
               isMe={row.userId === user.id} leaderPoints={leaderPoints}
@@ -225,14 +232,14 @@ export default function Dashboard() {
 
         <section className="panel">
           <div className="panel-head">
-            <h2>Tu historial</h2>
+            <h2>{t('dash.your_history')}</h2>
           </div>
-          <p className="panel-sub">Predicciones y resultados</p>
+          <p className="panel-sub">{t('dash.pred_results')}</p>
           {myHistory === null
             ? <div className="loading"><span className="spinner" /></div>
-            : <HistoryItems predictions={myHistory.predictions} />}
+            : <HistoryItems predictions={myHistory.predictions} own />}
           <p style={{ marginTop: '0.9rem', marginBottom: 0 }}>
-            <Link className="panel-link" to="/pronosticos">Ver todos mis pronósticos →</Link>
+            <Link className="panel-link" to="/pronosticos">{t('dash.view_all')}</Link>
           </p>
         </section>
       </div>

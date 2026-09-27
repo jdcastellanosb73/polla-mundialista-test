@@ -158,7 +158,21 @@ arriesga servir posiciones viejas justo después de cargar un resultado (el bug 
 frescura que un usuario nota de inmediato). Primero correcto; caché cuando la medición
 lo pida. El API es stateless: agregarla después es aditivo, no un rediseño.
 
-### 5.3 UX de plataforma
+### 5.3 Interfaz bilingüe (ES/EN) sin librería de i18n
+
+Toda la UI existe en español e inglés, con selector persistente por dispositivo
+(visible en el sidebar y en las pantallas de acceso). Se implementó con un
+diccionario propio + Context (~40 líneas de runtime) en lugar de i18next: dos
+idiomas y un solo namespace no justifican una dependencia. Detalles: los nombres
+de equipos viven en la base en español y se traducen solo al mostrar (el mapeo de
+banderas sigue funcionando sobre el valor original); las fechas usan el locale
+del idioma activo; los errores del API llegan en español y en modo EN se traducen
+por su código de error, con el mensaje del servidor como respaldo. Las etiquetas
+del historial distinguen persona gramatical: segunda persona en las filas propias
+("Acertaste el marcador") y tercera al ver a otro participante ("Acertó el
+marcador").
+
+### 5.4 UX de plataforma
 
 - **Pantalla de arranque en frío**: el hosting gratuito duerme el API; la app sondea
   `/health` y muestra progreso en lugar de un login congelado, con reintento a los

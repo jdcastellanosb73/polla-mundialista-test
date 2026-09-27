@@ -4,6 +4,7 @@ import { useAuth } from '../auth.jsx';
 import { ChampionModal, championSeen, markChampionSeen } from '../Modals.jsx';
 import { TrophyIcon, ChartIcon } from '../icons.jsx';
 import { Flag } from '../flags.jsx';
+import { useLang } from '../i18n.jsx';
 
 // Organizer home: live stats, result loading with a match selector and a big
 // score preview (design system), and a real activity feed derived from the
@@ -16,19 +17,20 @@ const ShieldIcon = () => (
   </svg>
 );
 
-const timeAgo = (iso) => {
+const timeAgoT = (iso, t) => {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return 'Ahora';
-  if (s < 3600) return `Hace ${Math.round(s / 60)} min`;
-  if (s < 86400) return `Hace ${Math.round(s / 3600)} h`;
-  return `Hace ${Math.round(s / 86400)} d`;
+  if (s < 60) return t('time.now');
+  if (s < 3600) return t('time.min', { n: Math.round(s / 60) });
+  if (s < 86400) return t('time.hour', { n: Math.round(s / 3600) });
+  return t('time.day', { n: Math.round(s / 86400) });
 };
-
-const fmtKickoff = (iso) =>
-  new Date(iso).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const { t, terr, team, locale } = useLang();
+  const timeAgo = (iso) => timeAgoT(iso, t);
+  const fmtKickoff = (iso) =>
+    new Date(iso).toLocaleString(locale, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
   const [showChampion, setShowChampion] = useState(false);
   const [matches, setMatches] = useState(null);
   const [leaders, setLeaders] = useState([]);
@@ -47,7 +49,7 @@ export default function AdminDashboard() {
         const done = ms.length > 0 && ms.every((m) => m.result);
         if (done && !championSeen(user.id)) setShowChampion(true);
       })
-      .catch((e) => setError(e.message));
+      .catch(setError);
 
   useEffect(() => { load(); }, []);
 
@@ -65,9 +67,7 @@ export default function AdminDashboard() {
   };
 
   const save = async () => {
-    if (selected.result && !window.confirm(
-      'Este partido ya tiene resultado. Corregirlo recalculará los puntos de todas las predicciones. ¿Continuar?'
-    )) return;
+    if (selected.result && !window.confirm(t('ad.confirm'))) return;
     setBusy(true);
     setStatus(null);
     try {
@@ -75,17 +75,17 @@ export default function AdminDashboard() {
         method: 'POST',
         body: { homeGoals: Number(home), awayGoals: Number(away) },
       });
-      setStatus({ ok: true, msg: `✓ Resultado guardado · ${res.predictionsScored} predicciones puntuadas` });
+      setStatus({ ok: true, msg: t('ad.saved', { n: res.predictionsScored }) });
       load();
     } catch (err) {
-      setStatus({ ok: false, msg: err.message });
+      setStatus({ ok: false, msg: terr(err) });
     } finally {
       setBusy(false);
     }
   };
 
-  if (error) return <div className="error-box" style={{ marginTop: '1.5rem' }}>{error}</div>;
-  if (!matches) return <div className="loading"><span className="spinner" /> Cargando el panel…</div>;
+  if (error) return <div className="error-box" style={{ marginTop: '1.5rem' }}>{terr(error)}</div>;
+  if (!matches) return <div className="loading"><span className="spinner" /> {t('ad.loading')}</div>;
 
   const finished = matches.filter((m) => m.result);
   const lastLoaded = [...finished].sort((a, b) => (b.result.loadedAt || '').localeCompare(a.result.loadedAt || ''));
@@ -94,15 +94,15 @@ export default function AdminDashboard() {
   const activity = [
     ...(leader && leader.points > 0 ? [{
       icon: <TrophyIcon size={16} />,
-      title: `${leader.displayName} lidera el ranking`,
-      detail: `${leader.points} puntos acumulados`,
-      time: 'Ahora',
+      title: t('ad.leads', { name: leader.displayName }),
+      detail: t('ad.points_acc', { n: leader.points }),
+      time: t('time.now'),
       key: 'leader',
     }] : []),
     ...lastLoaded.slice(0, 5).map((m) => ({
       icon: <ChartIcon size={16} />,
-      title: `${m.homeTeam} ${m.result.homeGoals} — ${m.result.awayGoals} ${m.awayTeam}`,
-      detail: 'Resultado cargado y predicciones puntuadas',
+      title: `${team(m.homeTeam)} ${m.result.homeGoals} — ${m.result.awayGoals} ${team(m.awayTeam)}`,
+      detail: t('ad.result_loaded'),
       time: m.result.loadedAt ? timeAgo(m.result.loadedAt) : '',
       key: `m${m.id}`,
     })),
@@ -115,28 +115,28 @@ export default function AdminDashboard() {
           onClose={() => { markChampionSeen(user.id); setShowChampion(false); }} />
       )}
 
-      <span className="page-kicker">CENTRO DE CONTROL · MUNDIAL 2026</span>
-      <h1>Hola, organizador</h1>
-      <p className="page-sub">Gestiona los resultados y mantén la competencia al día.</p>
+      <span className="page-kicker">{t('hero.kicker_admin')}</span>
+      <h1>{t('ad.hello')}</h1>
+      <p className="page-sub">{t('ad.sub')}</p>
 
       <div className="stats-row">
         <div className="stat-card accent">
-          <div className="stat-label">Participantes</div>
+          <div className="stat-label">{t('ad.participants')}</div>
           <div className="stat-value">{leaders.length}</div>
-          <div className="stat-hint">en el ranking del torneo</div>
+          <div className="stat-hint">{t('ad.in_ranking')}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Partidos finalizados</div>
+          <div className="stat-label">{t('ad.finished')}</div>
           <div className="stat-value">{finished.length}</div>
-          <div className="stat-hint">de {matches.length} programados</div>
+          <div className="stat-hint">{t('ad.of_scheduled', { n: matches.length })}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Última actualización</div>
+          <div className="stat-label">{t('ad.last_update')}</div>
           <div className="stat-value" style={{ fontSize: '1.5rem' }}>
-            {lastLoaded[0]?.result.loadedAt ? timeAgo(lastLoaded[0].result.loadedAt) : 'Sin resultados'}
+            {lastLoaded[0]?.result.loadedAt ? timeAgo(lastLoaded[0].result.loadedAt) : t('ad.no_results')}
           </div>
           <div className="stat-hint">
-            {lastLoaded[0] ? 'Todo está sincronizado' : 'Carga el primer resultado abajo'}
+            {lastLoaded[0] ? t('ad.synced') : t('ad.load_first')}
           </div>
         </div>
       </div>
@@ -144,19 +144,19 @@ export default function AdminDashboard() {
       <div className="dash-grid">
         <section className="panel">
           <div className="panel-head">
-            <h2>Cargar resultado</h2>
-            <span className="jornada-chip">● Fase de grupos</span>
+            <h2>{t('ad.load_result')}</h2>
+            <span className="jornada-chip">{t('ad.group_stage_chip')}</span>
           </div>
-          <p className="panel-sub">Actualiza el marcador del partido seleccionado.</p>
+          <p className="panel-sub">{t('ad.update_score')}</p>
 
-          <label className="field-label" htmlFor="match-select">Partido</label>
+          <label className="field-label" htmlFor="match-select">{t('ad.match')}</label>
           <select id="match-select" className="result-select" value={selectedId}
             onChange={(e) => pick(e.target.value)}>
-            <option value="">Selecciona un partido…</option>
+            <option value="">{t('ad.select')}</option>
             {matches.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.homeTeam} vs {m.awayTeam} · {fmtKickoff(m.kickoffAt)}
-                {m.result ? ` · finalizado ${m.result.homeGoals}-${m.result.awayGoals}` : ''}
+                {team(m.homeTeam)} vs {team(m.awayTeam)} · {fmtKickoff(m.kickoffAt)}
+                {m.result ? ` · ${t('ad.finished_opt')} ${m.result.homeGoals}-${m.result.awayGoals}` : ''}
               </option>
             ))}
           </select>
@@ -165,15 +165,15 @@ export default function AdminDashboard() {
             <>
               <div className="score-preview">
                 <div className="score-team">
-                  <span className="score-team-name"><Flag name={selected.homeTeam} /> {selected.homeTeam}</span>
+                  <span className="score-team-name"><Flag name={selected.homeTeam} /> {team(selected.homeTeam)}</span>
                   <input className="score-input" type="number" min="0" max="99" value={home}
-                    onChange={(e) => setHome(e.target.value)} aria-label={`Goles ${selected.homeTeam}`} placeholder="·" />
+                    onChange={(e) => setHome(e.target.value)} aria-label={t('ad.goals_of', { t: team(selected.homeTeam) })} placeholder="·" />
                 </div>
                 <span className="score-sep">—</span>
                 <div className="score-team">
-                  <span className="score-team-name"><Flag name={selected.awayTeam} /> {selected.awayTeam}</span>
+                  <span className="score-team-name"><Flag name={selected.awayTeam} /> {team(selected.awayTeam)}</span>
                   <input className="score-input" type="number" min="0" max="99" value={away}
-                    onChange={(e) => setAway(e.target.value)} aria-label={`Goles ${selected.awayTeam}`} placeholder="·" />
+                    onChange={(e) => setAway(e.target.value)} aria-label={t('ad.goals_of', { t: team(selected.awayTeam) })} placeholder="·" />
                 </div>
               </div>
 
@@ -181,23 +181,23 @@ export default function AdminDashboard() {
 
               <button className="btn btn-primary result-save" onClick={save}
                 disabled={busy || home === '' || away === ''}>
-                {busy ? 'Guardando…' : selected.result ? 'Corregir resultado' : 'Guardar resultado'}
+                {busy ? t('ad.saving') : selected.result ? t('ad.correct') : t('ad.save')}
               </button>
             </>
           )}
 
           <div className="result-note">
             <ShieldIcon />
-            Los cambios se reflejan automáticamente en el leaderboard de todos los participantes.
+            {t('ad.note')}
           </div>
         </section>
 
         <section className="panel">
           <div className="panel-head">
-            <h2>Actividad reciente</h2>
+            <h2>{t('ad.activity')}</h2>
           </div>
-          <p className="panel-sub">Lo que está pasando en tu polla.</p>
-          {activity.length === 0 && <p className="lb-empty">Aún no hay actividad — todo empieza con el primer resultado.</p>}
+          <p className="panel-sub">{t('ad.happening')}</p>
+          {activity.length === 0 && <p className="lb-empty">{t('ad.no_activity')}</p>}
           {activity.map((a) => (
             <div className="act-item" key={a.key}>
               <span className="act-icon">{a.icon}</span>

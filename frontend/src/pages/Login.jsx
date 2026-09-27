@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 import { TrophyIcon } from '../icons.jsx';
+import { LangToggle, useLang } from '../i18n.jsx';
 
 // Split-screen access pages (participants and organizers). PRIVATE-GROUP model:
 // there is no self-registration — the organizer creates every account and hands
@@ -57,6 +58,7 @@ export function EyeIcon({ off }) {
 }
 
 export function Hero({ variant }) {
+  const { t } = useLang();
   const admin = variant === 'admin';
   return (
     <aside className="login-hero">
@@ -66,41 +68,39 @@ export function Hero({ variant }) {
           <span className="hero-brand-name">polla<em>Mundial</em></span>
         </div>
         {admin && (
-          <span className="hero-secure"><ShieldIcon /> Entorno seguro</span>
+          <span className="hero-secure"><ShieldIcon /> {t('hero.secure')}</span>
         )}
       </div>
 
       <div className="hero-body">
         <span className="hero-kicker">
-          {admin ? 'CENTRO DE CONTROL · MUNDIAL 2026' : 'MUNDIAL 2026 · EDICIÓN OFICIAL'}
+          {admin ? t('hero.kicker_admin') : t('hero.kicker_user')}
         </span>
         {admin ? (
-          <h2 className="hero-title">Tu polla.<br /><em>Tus reglas.</em></h2>
+          <h2 className="hero-title">{t('hero.title_admin_1')}<br /><em>{t('hero.title_admin_2')}</em></h2>
         ) : (
-          <h2 className="hero-title">Donde cada<br /><em>pronóstico cuenta.</em></h2>
+          <h2 className="hero-title">{t('hero.title_user_1')}<br /><em>{t('hero.title_user_2')}</em></h2>
         )}
         <p className="hero-text">
-          {admin
-            ? 'Administra los resultados, tu grupo de participantes y la emoción de cada jornada.'
-            : 'Vive la pasión del fútbol, reta a tus amigos y demuestra quién sabe más de la cancha.'}
+          {admin ? t('hero.text_admin') : t('hero.text_user')}
         </p>
       </div>
 
       {admin ? (
         <div className="hero-foot hero-stats">
-          <span className="hero-stat-block"><strong>12</strong><small>partidos programados</small></span>
-          <span className="hero-stat-block"><strong>02</strong><small>grupos en juego</small></span>
-          <span className="hero-stat-block"><strong>100%</strong><small>puntuación automática</small></span>
+          <span className="hero-stat-block"><strong>12</strong><small>{t('hero.stat_matches')}</small></span>
+          <span className="hero-stat-block"><strong>02</strong><small>{t('hero.stat_groups')}</small></span>
+          <span className="hero-stat-block"><strong>100%</strong><small>{t('hero.stat_auto')}</small></span>
         </div>
       ) : (
         <div className="hero-foot">
           <span className="hero-stat">
             <strong>12</strong>
-            <small>partidos</small>
+            <small>{t('hero.stat_matches_short')}</small>
           </span>
           <span className="hero-foot-text">
-            <strong>La competencia ya empezó</strong>
-            <small>¿Listo para jugar?</small>
+            <strong>{t('hero.foot_started')}</strong>
+            <small>{t('hero.foot_ready')}</small>
           </span>
         </div>
       )}
@@ -111,6 +111,7 @@ export function Hero({ variant }) {
 export default function Login({ variant = 'user' }) {
   const admin = variant === 'admin';
   const { user, login } = useAuth();
+  const { t, terr } = useLang();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPass, setShowPass] = useState(false);
@@ -136,7 +137,7 @@ export default function Login({ variant = 'user' }) {
       if (logged.mustChangePassword) navigate('/cambiar-contrasena');
       else navigate(admin ? '/admin' : '/');
     } catch (err) {
-      setError(err.message || 'Error inesperado');
+      setError(err);
     } finally {
       setBusy(false);
     }
@@ -144,72 +145,64 @@ export default function Login({ variant = 'user' }) {
 
   return (
     <div className="login-split">
+      <LangToggle float />
       <Hero variant={variant} />
 
       <section className="login-panel">
         <div className="login-box">
           <span className="login-kicker">
-            {admin ? <><KeyIcon /> ACCESO ADMINISTRATIVO</> : 'BIENVENIDO DE VUELTA'}
+            {admin ? <><KeyIcon /> {t('login.kicker_admin')}</> : t('login.kicker_user')}
           </span>
-          <h1>{admin ? 'Hola, organizador' : 'Inicia sesión'}</h1>
+          <h1>{admin ? t('login.title_admin') : t('login.title_user')}</h1>
           <p className="login-sub">
-            {admin
-              ? 'Ingresa tus credenciales para continuar.'
-              : 'Ingresa para consultar y actualizar tus pronósticos.'}
+            {admin ? t('login.sub_admin') : t('login.sub_user')}
           </p>
 
           <form onSubmit={submit} className="login-form">
             <label>
-              <span className="field-label">{admin ? 'Correo de administrador' : 'Correo electrónico'}</span>
+              <span className="field-label">{admin ? t('login.email_admin') : t('login.email_user')}</span>
               <span className="field has-icon">
                 <MailIcon />
                 <input type="email" value={form.email} onChange={set('email')} required autoFocus
-                  placeholder={admin ? 'admin@correo.com' : 'tu@correo.com'} autoComplete="email" />
+                  placeholder={admin ? t('login.email_ph_admin') : t('login.email_ph_user')} autoComplete="email" />
               </span>
             </label>
 
             <label>
-              <span className="field-label">Contraseña</span>
+              <span className="field-label">{t('login.password')}</span>
               <span className="field has-icon">
                 {admin ? <KeyIcon /> : <LockIcon />}
                 <input type={showPass ? 'text' : 'password'} value={form.password}
                   onChange={set('password')} minLength={8} required placeholder="••••••••"
                   autoComplete="current-password" />
                 <button type="button" className="eye-btn" onClick={() => setShowPass(!showPass)}
-                  aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                  aria-label={showPass ? t('login.hide_pw') : t('login.show_pw')}>
                   <EyeIcon off={showPass} />
                 </button>
               </span>
             </label>
 
-            {error && <div className="error-box">{error}</div>}
+            {error && <div className="error-box">{terr(error)}</div>}
 
             <button className="login-cta" disabled={busy}>
-              {busy ? 'Un momento…' : admin ? 'Entrar al panel →' : 'Entrar a mi polla →'}
+              {busy ? t('login.wait') : admin ? t('login.cta_admin') : t('login.cta_user')}
             </button>
           </form>
 
-          {admin ? (
-            <div className="admin-note">
-              <ShieldIcon />
-              <span>Este acceso está reservado para los administradores del torneo.</span>
-            </div>
-          ) : (
-            <div className="admin-note">
-              <ShieldIcon />
-              <span>Es una polla privada: el organizador crea tu cuenta y te entrega la contraseña temporal.</span>
-            </div>
-          )}
+          <div className="admin-note">
+            <ShieldIcon />
+            <span>{admin ? t('login.note_admin') : t('login.note_user')}</span>
+          </div>
 
           <div className="login-divider" />
 
           <p className="login-switch">
             {admin ? (
-              <Link to="/login">Volver al acceso de participantes →</Link>
+              <Link to="/login">{t('login.back_participants')}</Link>
             ) : (
               <>
-                <span className="muted">Acceso para organizadores</span>
-                <Link to="/admin/login">Ir al panel admin →</Link>
+                <span className="muted">{t('login.for_organizers')}</span>
+                <Link to="/admin/login">{t('login.go_admin')}</Link>
               </>
             )}
           </p>

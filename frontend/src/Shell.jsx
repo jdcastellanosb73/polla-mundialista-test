@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from './auth.jsx';
 import { api } from './api.js';
 import { TrophyIcon } from './icons.jsx';
+import { LangToggle, useLang } from './i18n.jsx';
 
 // App shell after sign-in: navy sidebar (brand, user, role-aware nav, context
 // card) + light content area. Matches the dashboard design system.
@@ -36,14 +37,15 @@ const LogoutIcon = () => (
   </svg>
 );
 
-const fmtNext = (iso) =>
-  new Date(iso).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const fmtNext = (iso, locale) =>
+  new Date(iso).toLocaleString(locale, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 export const initialsOf = (name) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
 
 export default function Shell() {
   const { user, logout } = useAuth();
+  const { t, team, locale } = useLang();
   const isAdmin = user.role === 'Admin';
   const [next, setNext] = useState(null);
 
@@ -66,38 +68,39 @@ export default function Shell() {
           <span className="sb-avatar">{initialsOf(user.displayName)}</span>
           <div>
             <div className="sb-user-name">{user.displayName}</div>
-            <div className="sb-user-role">{isAdmin ? 'Organizador del torneo' : 'Participante'}</div>
+            <div className="sb-user-role">{isAdmin ? t('shell.role_admin') : t('shell.role_user')}</div>
           </div>
         </div>
 
         <nav className="sb-nav">
           {isAdmin ? (
             <>
-              <NavLink to="/admin" end><SummaryIcon /> Resumen</NavLink>
-              <NavLink to="/admin/participantes"><UsersIcon /> Participantes</NavLink>
+              <NavLink to="/admin" end><SummaryIcon /> {t('shell.nav_summary')}</NavLink>
+              <NavLink to="/admin/participantes"><UsersIcon /> {t('shell.nav_participants')}</NavLink>
             </>
           ) : (
             <>
-              <NavLink to="/" end><RankingIcon /> Ranking</NavLink>
-              <NavLink to="/pronosticos"><BallIcon /> Mis pronósticos</NavLink>
+              <NavLink to="/" end><RankingIcon /> {t('shell.nav_ranking')}</NavLink>
+              <NavLink to="/pronosticos"><BallIcon /> {t('shell.nav_predictions')}</NavLink>
             </>
           )}
         </nav>
 
         {isAdmin ? (
           <div className="sb-card">
-            <strong>Panel protegido</strong>
-            Solo cuentas con rol de administrador.
+            <strong>{t('shell.protected_title')}</strong>
+            {t('shell.protected_sub')}
           </div>
         ) : next ? (
           <div className="sb-card">
-            <strong>Próximo partido</strong>
-            <span className="hl">{next.homeTeam} vs {next.awayTeam}</span><br />
-            {fmtNext(next.kickoffAt)}
+            <strong>{t('shell.next_match')}</strong>
+            <span className="hl">{team(next.homeTeam)} vs {team(next.awayTeam)}</span><br />
+            {fmtNext(next.kickoffAt, locale)}
           </div>
         ) : null}
 
-        <button className="sb-logout" onClick={logout}><LogoutIcon /> Cerrar sesión</button>
+        <LangToggle dark />
+        <button className="sb-logout" onClick={logout}><LogoutIcon /> {t('shell.logout')}</button>
       </aside>
 
       <main className="content">

@@ -1,31 +1,35 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { Flag } from '../flags.jsx';
-
-const fmtKickoff = (iso) =>
-  new Date(iso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' });
+import { useLang } from '../i18n.jsx';
 
 function Team({ name }) {
+  const { team } = useLang();
   return (
     <>
       <Flag name={name} />
-      <span>{name}</span>
+      <span>{team(name)}</span>
     </>
   );
 }
 
 function PointsBadge({ points }) {
+  const { t } = useLang();
   if (points === null || points === undefined) return null;
-  if (points === 3) return <span className="badge badge-gold">3 pts · marcador exacto</span>;
-  if (points === 1) return <span className="badge badge-silver">1 pt · acertó resultado</span>;
+  if (points === 3) return <span className="badge badge-gold">{t('mt.badge_exact')}</span>;
+  if (points === 1) return <span className="badge badge-silver">{t('mt.badge_outcome')}</span>;
   return <span className="badge badge-muted">0 pts</span>;
 }
 
 function MatchRow({ match, onSaved }) {
+  const { t, terr, locale } = useLang();
   const [home, setHome] = useState(match.myPrediction?.homeGoals ?? '');
   const [away, setAway] = useState(match.myPrediction?.awayGoals ?? '');
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  const fmtKickoff = (iso) =>
+    new Date(iso).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
 
   const save = async () => {
     setBusy(true);
@@ -35,10 +39,10 @@ function MatchRow({ match, onSaved }) {
         method: 'PUT',
         body: { homeGoals: Number(home), awayGoals: Number(away) },
       });
-      setStatus({ ok: true, msg: '✓ Guardada' });
+      setStatus({ ok: true, msg: t('mt.saved') });
       onSaved();
     } catch (err) {
-      setStatus({ ok: false, msg: err.message });
+      setStatus({ ok: false, msg: terr(err) });
     } finally {
       setBusy(false);
     }
@@ -59,34 +63,34 @@ function MatchRow({ match, onSaved }) {
           {match.myPrediction ? (
             <>
               <span className="mypred">
-                Predijiste {match.myPrediction.homeGoals}-{match.myPrediction.awayGoals}
+                {t('mt.predicted', { h: match.myPrediction.homeGoals, a: match.myPrediction.awayGoals })}
               </span>
               <PointsBadge points={match.myPrediction.points} />
             </>
           ) : (
-            <span className="mypred">Sin predicción</span>
+            <span className="mypred">{t('mt.no_pred')}</span>
           )}
         </div>
       ) : match.isOpen ? (
         <div className="match-predict">
           <input type="number" min="0" max="99" value={home}
-            onChange={(e) => setHome(e.target.value)} aria-label="Goles local" placeholder="·" />
+            onChange={(e) => setHome(e.target.value)} aria-label={t('mt.home_goals')} placeholder="·" />
           <span className="dash">-</span>
           <input type="number" min="0" max="99" value={away}
-            onChange={(e) => setAway(e.target.value)} aria-label="Goles visitante" placeholder="·" />
+            onChange={(e) => setAway(e.target.value)} aria-label={t('mt.away_goals')} placeholder="·" />
           <button className="btn btn-primary btn-sm" onClick={save}
             disabled={busy || home === '' || away === ''}>
-            {busy ? '...' : match.myPrediction ? 'Actualizar' : 'Guardar'}
+            {busy ? '...' : match.myPrediction ? t('mt.update') : t('mt.save')}
           </button>
           {match.myPrediction && !status && <span className="ok">✓</span>}
           {status && <span className={status.ok ? 'ok' : 'error'}>{status.msg}</span>}
         </div>
       ) : (
         <div className="match-final">
-          <span className="badge badge-muted">Cerrado · esperando resultado</span>
+          <span className="badge badge-muted">{t('mt.closed')}</span>
           {match.myPrediction && (
             <span className="mypred">
-              Predijiste {match.myPrediction.homeGoals}-{match.myPrediction.awayGoals}
+              {t('mt.predicted', { h: match.myPrediction.homeGoals, a: match.myPrediction.awayGoals })}
             </span>
           )}
         </div>
@@ -96,18 +100,19 @@ function MatchRow({ match, onSaved }) {
 }
 
 export default function Matches() {
+  const { t, terr } = useLang();
   const [matches, setMatches] = useState(null);
   const [error, setError] = useState(null);
 
   const load = () =>
-    api('/api/matches').then(setMatches).catch((e) => setError(e.message));
+    api('/api/matches').then(setMatches).catch(setError);
 
   useEffect(() => {
     load();
   }, []);
 
-  if (error) return <div className="error-box" style={{ marginTop: '1.5rem' }}>{error}</div>;
-  if (!matches) return <div className="loading"><span className="spinner" /> Cargando partidos...</div>;
+  if (error) return <div className="error-box" style={{ marginTop: '1.5rem' }}>{terr(error)}</div>;
+  if (!matches) return <div className="loading"><span className="spinner" /> {t('mt.loading')}</div>;
 
   const groups = [...new Set(matches.map((m) => m.groupCode))].sort();
   const open = matches.filter((m) => m.isOpen);
@@ -115,22 +120,22 @@ export default function Matches() {
 
   return (
     <div>
-      <span className="page-kicker">MUNDIAL 2026 · POLLA OFICIAL</span>
+      <span className="page-kicker">{t('dash.kicker')}</span>
       <div className="page-head">
         <div>
-          <h1>Mis pronósticos</h1>
-          <p className="page-sub" style={{ marginBottom: 0 }}>3 pts marcador exacto · 1 pt resultado correcto · 0 pts fallo. Cierra al inicio de cada partido.</p>
+          <h1>{t('mt.title')}</h1>
+          <p className="page-sub" style={{ marginBottom: 0 }}>{t('mt.rules')}</p>
         </div>
         <span className="progress-chip">
-          {predicted.length}/{open.length} partidos abiertos predichos
+          {t('mt.progress', { a: predicted.length, b: open.length })}
         </span>
       </div>
 
       {groups.map((g) => (
         <section key={g} className="card">
           <div className="group-head">
-            <h2>Grupo {g}</h2>
-            <span className="group-tag">Fase de grupos</span>
+            <h2>{t('mt.group', { g })}</h2>
+            <span className="group-tag">{t('mt.group_stage')}</span>
           </div>
           {matches
             .filter((m) => m.groupCode === g)

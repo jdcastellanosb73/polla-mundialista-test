@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { API_BASE } from './api.js';
 import { TrophyIcon, BallIcon } from './icons.jsx';
+import { LangToggle, useLang } from './i18n.jsx';
 
 // Free-tier hosts (Render) put the API to sleep after idle periods; the first
 // request can take 30-60s. Without this gate the login just looks frozen.
@@ -22,6 +23,7 @@ async function probe(timeoutMs) {
 }
 
 export default function ServerWakeGate({ children }) {
+  const { t } = useLang();
   const [status, setStatus] = useState('checking'); // checking | waking | ready | down
   const [elapsed, setElapsed] = useState(0);
   const startedAt = useRef(Date.now());
@@ -61,6 +63,7 @@ export default function ServerWakeGate({ children }) {
 
   return (
     <div className="wake-screen">
+      <LangToggle float />
       <div className="hero-brand wake-brand">
         <span className="hero-brand-mark"><TrophyIcon size={24} /></span>
         <span className="hero-brand-name">polla<em>Mundial</em></span>
@@ -69,22 +72,17 @@ export default function ServerWakeGate({ children }) {
         <span className="wake-ball"><BallIcon size={32} /></span>
         {status === 'waking' ? (
           <>
-            <h1>Despertando el servidor…</h1>
-            <p className="muted">
-              El servidor gratuito entra en reposo cuando nadie lo usa y tarda hasta un minuto
-              en volver. Esto solo pasa en el primer acceso.
-            </p>
+            <h1>{t('wk.waking')}</h1>
+            <p className="muted">{t('wk.text')}</p>
             <div className="wake-progress"><div className="wake-progress-bar" /></div>
-            <p className="wake-elapsed">{elapsed}s — no cierres esta pestaña</p>
+            <p className="wake-elapsed">{t('wk.elapsed', { s: elapsed })}</p>
           </>
         ) : (
           <>
-            <h1>El servidor no responde</h1>
-            <p className="muted">
-              Llevamos más de dos minutos intentando. Puede ser un problema temporal del hosting.
-            </p>
+            <h1>{t('wk.down')}</h1>
+            <p className="muted">{t('wk.down_text')}</p>
             <button className="login-cta wake-retry" onClick={() => window.location.reload()}>
-              Reintentar →
+              {t('wk.retry')}
             </button>
           </>
         )}
