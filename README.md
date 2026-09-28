@@ -1,9 +1,11 @@
 # Polla Mundialista
 
-World Cup prediction pool for a private group of users. Users register, predict the score of
-12 seeded group-stage matches, an administrator loads the real results, and the system scores
-every prediction automatically (3 points exact score, 1 point correct outcome, 0 otherwise)
-and publishes a global leaderboard with per-user history.
+World Cup prediction pool for a private group of users. There is no public sign-up: the
+organizer creates every account and hands out a one-time temporary password that must be
+changed on first sign-in. Participants predict the score of 12 seeded group-stage matches,
+the organizer loads the real results, and the system scores every prediction automatically
+(3 points exact score, 1 point correct outcome, 0 otherwise) and publishes a global
+leaderboard with per-user history. The interface is bilingual (Spanish/English).
 
 | Layer | Technology |
 |---|---|
@@ -74,8 +76,12 @@ The app opens at `http://localhost:5173` and points to the API at `http://localh
 | Admin | `admin@polla.dev` | `Admin123!` |
 | User | `user@polla.dev` | `User123!` |
 
-Or register a new account from the login screen (registration always creates the `User` role;
-the only admin is seeded from configuration).
+There is no public registration (private-group model). To add participants, sign in as the
+admin and use the "Participantes" section: it creates the account and shows a one-time
+temporary password. On their first sign-in the participant is forced to set their own
+password — until then the API refuses every other call for that account (server-enforced).
+Accounts created this way always get the `User` role; the only admin is seeded from
+configuration.
 
 ### 4. Tests
 
@@ -108,17 +114,23 @@ configuration sections). See `.env.example` for the full list used in deployment
 
 | Method | Route | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/register` | — | Create account (role `User`); rate limited |
-| POST | `/api/auth/login` | — | Obtain JWT; rate limited, silent lockout after repeated failures |
-| GET | `/api/matches` | User | Matches with the caller's own predictions |
+| POST | `/api/auth/login` | — | Obtain JWT; declares its portal (`user`/`admin`, server-enforced), rate limited, silent lockout after repeated failures |
+| POST | `/api/auth/change-password` | User/Admin | Set a new password; the only route available while a first-login change is pending |
+| GET | `/api/admin/users` | Admin | List participants with onboarding status |
+| POST | `/api/admin/users` | Admin | Create a participant; returns a one-time strong temporary password |
+| GET | `/api/matches` | User/Admin | Matches with the caller's own predictions |
 | PUT | `/api/matches/{id}/prediction` | User | Create/update a prediction (locked at kickoff or once a result exists) |
 | POST | `/api/matches/{id}/result` | Admin | Load or correct a result; scores all predictions idempotently |
-| GET | `/api/leaderboard` | User | Global ranking (points, tie-break by exact hits) |
-| GET | `/api/users/{id}/predictions` | User | A user's history, finished matches only |
+| GET | `/api/leaderboard` | User/Admin | Global ranking (points, tie-break by exact hits) |
+| GET | `/api/users/{id}/predictions` | User/Admin | A user's history, finished matches only |
 | GET | `/health` | — | Health check |
 
+There is intentionally no `/api/auth/register`: accounts exist only through the organizer
+(private-group model, see `docs/DECISIONS.md` §2).
+
 Errors always respond as `{ "error": { "code", "message" } }` with an appropriate HTTP status
-(`VALIDATION_ERROR`, `EMAIL_TAKEN`, `INVALID_CREDENTIALS`, `RATE_LIMITED`, `MATCH_NOT_FOUND`,
+(`VALIDATION_ERROR`, `EMAIL_TAKEN`, `INVALID_CREDENTIALS`, `PORTAL_MISMATCH`, `RATE_LIMITED`,
+`WEAK_PASSWORD`, `SAME_PASSWORD`, `PASSWORD_CHANGE_REQUIRED`, `MATCH_NOT_FOUND`,
 `MATCH_ALREADY_STARTED`, `RESULT_ALREADY_LOADED`, `USER_NOT_FOUND`).
 
 ## Troubleshooting
