@@ -14,7 +14,7 @@ services:
       - key: Jwt__Key
         sync: false   # strong random production key
       - key: WebOrigin
-        sync: false   # the hosted frontend origin, e.g. https://polla-mundialista.netlify.app
+        sync: false   # the hosted frontend origin, e.g. https://jdcastellanosb73.github.io
       - key: Seed__AdminPassword
         sync: false
       - key: Seed__DemoPassword

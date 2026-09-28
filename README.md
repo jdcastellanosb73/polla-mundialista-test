@@ -19,7 +19,7 @@ backend/
   PollaMundialista.Application/      Contracts (DTOs) and application error types
   PollaMundialista.Domain/           Entities and pure business rules (scoring engine)
   PollaMundialista.Infrastructure/   Persistence (EF Core/PostgreSQL), seeding, JWT issuing
-  PollaMundialista.Tests/            Unit + integration tests (42)
+  PollaMundialista.Tests/            Unit + integration tests (46)
   PollaMundialista.sln
   Dockerfile
   db/                                schema.sql and seed.sql (relational schema, documented)
@@ -84,10 +84,12 @@ cd backend
 dotnet test
 ```
 
-42 tests: 13 unit tests on the scoring engine and 29 integration tests that boot the real
+46 tests: 13 unit tests on the scoring engine and 33 integration tests that boot the real
 application (`WebApplicationFactory` with in-memory SQLite, which enforces the unique indexes
-and constraints under test). They cover auth rules, rate limiting, account lockout, prediction
-locks, role enforcement, idempotent scoring recompute, leaderboard ordering and history privacy.
+and constraints under test). They cover auth rules, rate limiting, account lockout, the
+private-group onboarding flow (organizer-created accounts, one-time temp password, forced
+first-login change), portal segregation, prediction locks, role enforcement, idempotent
+scoring recompute, leaderboard ordering and history privacy.
 
 ## Configuration
 

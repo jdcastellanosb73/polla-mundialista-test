@@ -41,7 +41,7 @@ jobs:
           # The app is served under /<repo>/ on GitHub Pages
           BASE_PATH: /polla-mundialista-test/
           # API base URL; override without commits via the repository variable API_URL
-          VITE_API_URL: ${{ vars.API_URL || 'https://polla-api.onrender.com' }}
+          VITE_API_URL: ${{ vars.API_URL || 'https://polla-api-yn02.onrender.com' }}
 
       # SPA fallback: GitHub Pages serves 404.html for unknown routes (e.g. a
       # refresh on /login). Serving the app there lets the router take over.
