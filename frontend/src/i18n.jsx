@@ -63,7 +63,7 @@ const S = {
   'login.hide_pw': { es: 'Ocultar contraseña', en: 'Hide password' },
   'login.wait': { es: 'Un momento…', en: 'One moment…' },
   'login.cta_admin': { es: 'Entrar al panel →', en: 'Enter the panel →' },
-  'login.cta_user': { es: 'Entrar a mi polla →', en: 'Enter my pool →' },
+  'login.cta_user': { es: 'Entrar a mi cuenta →', en: 'Enter my account →' },
   'login.note_admin': {
     es: 'Este acceso está reservado para los administradores del torneo.',
     en: 'This access is reserved for tournament administrators.',
