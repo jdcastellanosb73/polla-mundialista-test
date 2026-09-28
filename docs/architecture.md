@@ -90,6 +90,38 @@ POST /api/matches/{id}/result  (rol Admin)
 
 ---
 
+### Flujo de datos de punta a punta (pronóstico → resultado → ranking)
+
+```mermaid
+sequenceDiagram
+    participant P as Participante (SPA)
+    participant A as Organizador (SPA)
+    participant API as Web API (.NET 8)
+    participant DB as PostgreSQL
+
+    P->>API: PUT /api/matches/{id}/prediction (JWT)
+    API->>API: valida candados (kickoff, sin resultado)
+    API->>DB: UPSERT prediction (UNIQUE user+match)
+    API-->>P: 200 (predicción guardada)
+
+    A->>API: POST /api/matches/{id}/result (JWT rol Admin)
+    API->>DB: guarda marcador + result_loaded_at
+    API->>DB: puntúa TODAS las predicciones del partido (misma transacción, idempotente)
+    API-->>A: 200 + predicciones puntuadas
+
+    loop cada 30 s (polling del dashboard)
+        P->>API: GET /api/leaderboard + /api/matches
+        API->>DB: agregación SQL sobre puntos ya materializados
+        API-->>P: ranking + resultados nuevos
+        P->>P: popup de resultados / campeón (si aplica)
+    end
+```
+
+Este flujo resume las tres garantías del sistema: el candado de predicciones y el
+constraint único se validan en servidor y base, la puntuación se materializa de forma
+atómica e idempotente al cargar el resultado, y las lecturas calientes (ranking) son
+agregaciones baratas que el front refresca solo.
+
 ## 4. Modelo de datos
 
 Fuente de verdad: [`backend/db/schema.sql`](../backend/db/schema.sql)
